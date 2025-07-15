@@ -218,7 +218,7 @@
             font-size: 12px;
             width: 180px; /* Fixed width for consistency */
             -webkit-appearance: none; /* Remove default dropdown arrow on WebKit browsers */
-            -moz-appearance: none; /* Remove default dropdown arrow on Firefox */
+            -moz-appearance: none; /* Remove default arrow on Firefox */
             appearance: none; /* Remove default arrow */
             background-image: url('data:image/svg+xml;utf8,<svg fill="%2300FF00" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>'); /* Custom arrow */
             background-repeat: no-repeat;
@@ -381,6 +381,7 @@
             logToConsole("Web Speech API not found. Voice features will not work.");
         }
 
+        // --- MODIFIED populateVoiceList function ---
         function populateVoiceList() {
             const voices = SpeechSynthesis.getVoices();
             voiceSelect.innerHTML = ''; // Clear existing options
@@ -394,40 +395,106 @@
                 return;
             }
 
-            let defaultVoiceIndex = 0;
-            // Attempt to find a suitable default voice
-            voices.forEach((voice, index) => {
-                const option = document.createElement('option');
-                option.textContent = `${voice.name} (${voice.lang})`;
-                option.setAttribute('data-name', voice.name);
-                option.value = voice.name;
+            // Categorize voices
+            const maleVoices = [];
+            const femaleVoices = [];
+            const otherVoices = []; // For voices where gender is not easily identifiable
 
-                // Prioritize English voices, then default, then by region
-                if (voice.lang.startsWith('en')) {
-                    if (voice.default) {
-                        defaultVoiceIndex = index;
-                    } else if (voice.lang === 'en-US' && (!voices[defaultVoiceIndex] || !voices[defaultVoiceIndex].default)) {
-                        defaultVoiceIndex = index;
-                    } else if (voice.lang === 'en-GB' && (!voices[defaultVoiceIndex] || (voices[defaultVoiceIndex].lang !== 'en-US' && !voices[defaultVoiceIndex].default))) {
-                        defaultVoiceIndex = index;
-                    } else if (voice.lang === 'en-IN' && (!voices[defaultVoiceIndex] || (voices[defaultVoiceIndex].lang !== 'en-US' && voices[defaultVoiceIndex].lang !== 'en-GB' && !voices[defaultVoiceIndex].default))) {
-                        defaultVoiceIndex = index;
-                    }
+            voices.forEach(voice => {
+                // Heuristic to guess gender from voice name or properties
+                const voiceNameLower = voice.name.toLowerCase();
+                const voiceLangLower = voice.lang.toLowerCase();
+
+                // Prioritize voices that explicitly state gender or are common "male/female" voices
+                if (voiceNameLower.includes('male') || voiceNameLower.includes('david') || voiceNameLower.includes('zira') && !voiceNameLower.includes('zira (female)')) {
+                    maleVoices.push(voice);
+                } else if (voiceNameLower.includes('female') || voiceNameLower.includes('zira') || voiceNameLower.includes('anna') || voiceNameLower.includes('helena') || voiceNameLower.includes('eva')) {
+                    // Note: "Zira" is often female by default in Windows, but can be ambiguous in names, so checking for "female" is safer.
+                    femaleVoices.push(voice);
+                } else if (voice.gender === 'male') { // Official gender property (less reliable cross-browser)
+                    maleVoices.push(voice);
+                } else if (voice.gender === 'female') { // Official gender property
+                    femaleVoices.push(voice);
                 }
-                voiceSelect.appendChild(option);
+                 else if (voiceLangLower.startsWith('en')) { // If English, but gender not clear
+                    // Try to use common default voice names for platforms if not explicitly categorized
+                    if (voiceNameLower.includes('microsoft zira') || voiceNameLower.includes('microsoft anna')) {
+                        femaleVoices.push(voice);
+                    } else if (voiceNameLower.includes('microsoft david')) {
+                        maleVoices.push(voice);
+                    } else {
+                        otherVoices.push(voice); // Add to other if no clear gender
+                    }
+                } else {
+                    otherVoices.push(voice); // Non-English or unclear English
+                }
             });
 
-            if (voices.length > 0) {
-                voiceSelect.selectedIndex = defaultVoiceIndex;
-                currentVoice = voices[defaultVoiceIndex];
-                logToConsole(`Selected AI Voice: ${currentVoice.name}`);
+            // Sort voices alphabetically by name within their categories
+            maleVoices.sort((a, b) => a.name.localeCompare(b.name));
+            femaleVoices.sort((a, b) => a.name.localeCompare(b.name));
+            otherVoices.sort((a, b) => a.name.localeCompare(b.name));
+
+            let selectedDefaultVoice = null; // To store the voice we end up selecting
+
+            // Add voices to the select dropdown, categorized
+            const addVoiceOptions = (voicesArray, label) => {
+                if (voicesArray.length > 0) {
+                    const optgroup = document.createElement('optgroup');
+                    optgroup.label = label;
+                    voicesArray.forEach(voice => {
+                        const option = document.createElement('option');
+                        option.textContent = `${voice.name} (${voice.lang})`;
+                        option.setAttribute('data-name', voice.name);
+                        option.value = voice.name;
+                        optgroup.appendChild(option);
+
+                        // Try to set an initial default based on preference (e.g., a specific male or female English voice)
+                        if (!selectedDefaultVoice && voice.lang.startsWith('en')) {
+                             // Prioritize certain well-known default voices if available
+                            if (voice.name.includes('Google US English') && voice.name.includes('Male')) {
+                                selectedDefaultVoice = voice;
+                            } else if (voice.name.includes('Microsoft David') && !selectedDefaultVoice) {
+                                selectedDefaultVoice = voice;
+                            } else if (voice.name.includes('Google US English') && voice.name.includes('Female') && !selectedDefaultVoice) {
+                                selectedDefaultVoice = voice;
+                            } else if (voice.name.includes('Microsoft Zira') && !selectedDefaultVoice) {
+                                selectedDefaultVoice = voice;
+                            }
+                        }
+                    });
+                    voiceSelect.appendChild(optgroup);
+                }
+            };
+
+            addVoiceOptions(maleVoices, 'Male Voices');
+            addVoiceOptions(femaleVoices, 'Female Voices');
+            addVoiceOptions(otherVoices, 'Other Voices');
+
+
+            // Set the selected voice
+            if (selectedDefaultVoice) {
+                voiceSelect.value = selectedDefaultVoice.name;
+                currentVoice = selectedDefaultVoice;
+            } else if (voices.length > 0) { // Fallback to the first available voice if no preferred default is found
+                voiceSelect.selectedIndex = 0;
+                currentVoice = voices[0];
             }
+
+            if (currentVoice) {
+                logToConsole(`Initial AI Voice: ${currentVoice.name}`);
+            } else {
+                logToConsole("No suitable AI voice found. Please check browser settings.");
+            }
+
 
             voiceSelect.addEventListener('change', () => {
                 const selectedVoiceName = voiceSelect.value;
                 currentVoice = voices.find(voice => voice.name === selectedVoiceName);
                 if (currentVoice) {
                     logToConsole(`AI Voice changed to: ${currentVoice.name}`);
+                    // Optional: Say something to demo the new voice
+                    speak("Voice changed successfully.");
                 }
             });
         }
@@ -436,8 +503,7 @@
         if (SpeechSynthesis.onvoiceschanged !== undefined) {
             SpeechSynthesis.onvoiceschanged = populateVoiceList;
         } else {
-            // Fallback for browsers that don't fire onvoiceschanged reliably (e.g., some Firefox versions)
-            setTimeout(populateVoiceList, 500); // Give a moment for voices to load
+            setTimeout(populateVoiceList, 500);
         }
 
 
@@ -519,7 +585,7 @@
 
             if (query.includes('open youtube')) {
                 speak("Opening YouTube.");
-                window.open("https://www.youtube.com", '_blank'); // Corrected URL
+                window.open("https://www.youtube.com", '_blank'); // Corrected URL: changed googleusercontent to youtube.com
             } else if (query.includes('open google')) {
                 speak("Opening Google.");
                 window.open("https://www.google.com", '_blank');
@@ -615,7 +681,7 @@
                             updateGUI("Jarvis Pro is sleeping. Say 'jarvis' to wake me up.", "sleeping");
                             logToConsole("Jarvis System Ready. AI voice enabled."); // Clarified message
                             logToConsole("Hint: Say 'Jarvis' to activate, then ask a question like 'What is the capital of France?' or 'Open YouTube'.");
-                            
+
                             // Ensure voices are loaded before starting listening
                             if (SpeechSynthesis.getVoices().length > 0) {
                                 listenForWakeWord();
