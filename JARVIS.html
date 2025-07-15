@@ -321,11 +321,11 @@
                     break;
                 case 'error':
                     stateAnimation.style.display = 'none';
-                    statusDisplay.style.color = '#FF0000';
+                    statusDisplay.style.color = '#FF0000'; // Change text to red on error
                     break;
-                default:
+                default: // 'idle' or unhandled states
                     stateAnimation.style.display = 'none';
-                    statusDisplay.style.color = '#00FFFF';
+                    statusDisplay.style.color = '#00FFFF'; // Reset text color
                     break;
             }
         }
@@ -337,7 +337,7 @@
         let recognition;
         if (SpeechRecognition) {
             recognition = new SpeechRecognition();
-            recognition.continuous = false;
+            recognition.continuous = false; // Listen for a single utterance
             recognition.interimResults = false;
             recognition.lang = 'en-IN'; // Set a default language for recognition
 
@@ -347,30 +347,42 @@
 
             recognition.onresult = (event) => {
                 const transcript = event.results[0][0].transcript.toLowerCase();
-                updateGUI(`User said: ${transcript}`, "idle");
+                updateGUI(`User said: "${transcript}"`, "idle"); // Keep the status concise
                 handleCommand(transcript);
             };
 
             recognition.onerror = (event) => {
-                updateGUI(`Speech recognition error: ${event.error}`, "error");
-                console.error('Speech recognition error', event.error);
-                setTimeout(listenForWakeWord, 2000);
+                console.error('Speech recognition error:', event.error);
+                if (event.error === 'not-allowed') {
+                    updateGUI("Microphone access denied. Please allow in browser settings.", "error");
+                    logToConsole("Microphone access was denied by the user or browser.");
+                } else if (event.error === 'no-speech') {
+                    updateGUI("No speech detected. Going back to sleep.", "sleeping");
+                    logToConsole("No speech detected after listening.");
+                    setTimeout(listenForWakeWord, 500); // Re-enable wake word listening
+                } else {
+                    updateGUI(`Speech recognition error: ${event.error}`, "error");
+                    logToConsole(`Speech recognition error: ${event.error}`);
+                    setTimeout(listenForWakeWord, 2000); // Attempt to restart wake word listening after error
+                }
             };
 
             recognition.onend = () => {
-                if (currentState !== "speaking" && currentState !== "processing") {
-                    updateGUI("Ready for command...", "idle");
-                    setTimeout(listenForWakeWord, 500);
+                // Only go back to wake word if not currently speaking or processing
+                if (currentState !== "speaking" && currentState !== "processing" && currentState !== "error") {
+                    updateGUI("Ready for command...", "idle"); // Brief idle state
+                    setTimeout(listenForWakeWord, 500); // Go back to wake word listening shortly
                 }
             };
 
         } else {
             updateGUI("Web Speech API not supported in this browser.", "error");
+            logToConsole("Web Speech API not found. Voice features will not work.");
         }
 
         function populateVoiceList() {
             const voices = SpeechSynthesis.getVoices();
-            voiceSelect.innerHTML = '';
+            voiceSelect.innerHTML = ''; // Clear existing options
 
             if (voices.length === 0) {
                 logToConsole("No speech synthesis voices available.");
@@ -382,21 +394,24 @@
             }
 
             let defaultVoiceIndex = 0;
-
+            // Attempt to find a suitable default voice
             voices.forEach((voice, index) => {
                 const option = document.createElement('option');
                 option.textContent = `${voice.name} (${voice.lang})`;
                 option.setAttribute('data-name', voice.name);
                 option.value = voice.name;
 
-                if (voice.lang.startsWith('en') && voice.default) {
-                    defaultVoiceIndex = index;
-                } else if (voice.lang === 'en-US' && !voices[defaultVoiceIndex].default) {
-                    defaultVoiceIndex = index;
-                } else if (voice.lang === 'en-GB' && !voices[defaultVoiceIndex].default && voices[defaultVoiceIndex].lang !== 'en-US') {
-                    defaultVoiceIndex = index;
-                } else if (voice.lang === 'en-IN' && !voices[defaultVoiceIndex].default && voices[defaultVoiceIndex].lang !== 'en-US' && voices[defaultVoiceIndex].lang !== 'en-GB') {
-                    defaultVoiceIndex = index;
+                // Prioritize English voices, then default, then by region
+                if (voice.lang.startsWith('en')) {
+                    if (voice.default) {
+                        defaultVoiceIndex = index;
+                    } else if (voice.lang === 'en-US' && (!voices[defaultVoiceIndex] || !voices[defaultVoiceIndex].default)) {
+                        defaultVoiceIndex = index;
+                    } else if (voice.lang === 'en-GB' && (!voices[defaultVoiceIndex] || (voices[defaultVoiceIndex].lang !== 'en-US' && !voices[defaultVoiceIndex].default))) {
+                        defaultVoiceIndex = index;
+                    } else if (voice.lang === 'en-IN' && (!voices[defaultVoiceIndex] || (voices[defaultVoiceIndex].lang !== 'en-US' && voices[defaultVoiceIndex].lang !== 'en-GB' && !voices[defaultVoiceIndex].default))) {
+                        defaultVoiceIndex = index;
+                    }
                 }
                 voiceSelect.appendChild(option);
             });
@@ -416,69 +431,90 @@
             });
         }
 
+        // Event listener for when voices are loaded/changed
         if (SpeechSynthesis.onvoiceschanged !== undefined) {
             SpeechSynthesis.onvoiceschanged = populateVoiceList;
         } else {
-            populateVoiceList();
+            // Fallback for browsers that don't fire onvoiceschanged reliably (e.g., some Firefox versions)
+            setTimeout(populateVoiceList, 500); // Give a moment for voices to load
         }
+
 
         function speak(text) {
             if (SpeechSynthesis && currentVoice) {
-                SpeechSynthesis.cancel();
+                SpeechSynthesis.cancel(); // Stop any current speech
 
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.voice = currentVoice;
                 utterance.lang = currentVoice.lang;
-                utterance.rate = 1.0;
-                utterance.pitch = 1.0;
+                utterance.rate = 1.0; // Normal speed
+                utterance.pitch = 1.0; // Normal pitch
 
                 utterance.onstart = () => {
-                    updateGUI(`Jarvis: ${text}`, "speaking");
+                    updateGUI(`Jarvis: "${text}"`, "speaking");
                 };
                 utterance.onend = () => {
-                    if (currentState === "speaking") {
+                    if (currentState === "speaking") { // Only reset if still speaking state
                         updateGUI("Ready for command...", "idle");
-                        setTimeout(listenForWakeWord, 500);
+                        setTimeout(listenForWakeWord, 500); // Re-enable wake word listener
                     }
                 };
                 utterance.onerror = (event) => {
                     logToConsole(`Speech synthesis error: ${event.error}`);
-                    updateGUI(`Jarvis (Voice Error): ${text}`, "error");
-                    setTimeout(listenForWakeWord, 500);
+                    updateGUI(`Jarvis (Voice Error): "${text}"`, "error");
+                    setTimeout(listenForWakeWord, 500); // Re-enable wake word listener after error
                 };
                 SpeechSynthesis.speak(utterance);
             } else {
-                updateGUI(`Jarvis (No Voice): ${text}`, "idle");
-                logToConsole("Speech synthesis not available or no voice selected.");
-                setTimeout(listenForWakeWord, 500);
+                updateGUI(`Jarvis (No Voice): "${text}"`, "idle");
+                logToConsole("Speech synthesis not available or no voice selected. Cannot speak.");
+                setTimeout(listenForWakeWord, 500); // Continue listening for commands even without voice
             }
         }
 
         function listenForWakeWord() {
-            updateGUI("Jarvis Pro is sleeping. Say 'jarvis' to wake me up.", "sleeping");
-            if (recognition) {
-                recognition.start();
-                setTimeout(() => {
-                    if (recognition && recognition.listening) {
-                        recognition.stop();
-                        updateGUI("No wake word detected, going back to sleep.", "sleeping");
+            if (recognition && SpeechSynthesis) { // Only attempt if speech APIs are available
+                if (SpeechSynthesis.speaking) {
+                    // Don't start listening if Jarvis is still speaking
+                    setTimeout(listenForWakeWord, 500);
+                    return;
+                }
+
+                updateGUI("Jarvis Pro is sleeping. Say 'jarvis' to wake me up.", "sleeping");
+                try {
+                    recognition.start();
+                    // Set a timeout to stop listening if no wake word is detected
+                    setTimeout(() => {
+                        if (recognition && recognition.listening && currentState === "sleeping") {
+                            recognition.stop();
+                            updateGUI("No wake word detected. Back to sleep.", "sleeping");
+                            logToConsole("Timeout: No wake word heard.");
+                        }
+                    }, 7000); // Listen for wake word for 7 seconds
+                } catch (e) {
+                    logToConsole("Error starting speech recognition for wake word: " + e.message);
+                    if (e.message.includes("already started")) {
+                        // This error can happen if onend hasn't fired yet
+                        // Ignore or handle gracefully
+                    } else {
+                        updateGUI("Error with mic, check permissions.", "error");
                     }
-                }, 7000);
+                }
             } else {
-                logToConsole("Speech recognition not available for wake word.");
+                logToConsole("Speech recognition not available for wake word. Check browser support.");
+                updateGUI("Voice commands disabled (Browser not supported).", "error");
             }
         }
 
         // --- Command Handling (All general queries now go to Gemini via Backend) ---
         async function handleCommand(query) {
-            updateGUI(`Processing: ${query}`, "processing");
+            updateGUI(`Processing: "${query}"`, "processing");
 
+            // Simple direct commands
             if (query.includes('jarvis')) {
                 speak("Yes, how can I help you?");
-                setTimeout(() => {
-                    if (recognition) recognition.start();
-                }, 1000);
-                return;
+                // After speaking, the onend event will restart recognition for the next command.
+                return; // Exit to prevent further processing
             }
 
             if (query.includes('open youtube')) {
@@ -498,16 +534,17 @@
             } else if (query.includes('play music')) {
                 speak("In a web environment, I cannot directly play local music files from your computer. Would you like me to open an online music streaming service like YouTube Music or Spotify web player?");
             }
-            else if (query.includes('exit') || query.includes('quit') || query.includes('stop')) {
+            else if (query.includes('exit') || query.includes('quit') || query.includes('stop listening')) {
                 speak("Goodbye! Have a great day.");
                 updateGUI("Jarvis Pro stopped.", "idle");
                 if (recognition && recognition.listening) {
-                    recognition.stop();
+                    recognition.stop(); // Manually stop recognition
                 }
+                return; // Exit to prevent further processing
             }
             // --- ALL OTHER QUERIES GO TO GEMINI VIA BACKEND ---
             else {
-                speak("Let me think...");
+                speak("Let me think..."); // Indicate that AI processing is about to begin
                 updateGUI("Querying AI...", "processing");
                 try {
                     const response = await fetch(`${BACKEND_BASE_URL}/api/gemini`, {
@@ -519,13 +556,17 @@
                     if (response.ok) {
                         speak(data.response);
                     } else {
+                        // Handle specific API errors from backend
                         speak(data.error || "Sorry, I encountered an error when talking to the AI.");
+                        logToConsole(`Backend error: ${data.error || 'Unknown'}`);
                     }
                 } catch (e) {
                     speak("Couldn't reach the AI backend. Is the server running?");
                     console.error("Backend Gemini fetch error:", e);
+                    logToConsole("Failed to connect to backend AI server.");
                 }
-                updateGUI("Ready for next command.", "idle");
+                // The `speak` function's `onend` will handle going back to `listenForWakeWord`
+                // No need to call updateGUI or listenForWakeWord here directly, as speak() does it.
             }
         }
 
@@ -547,12 +588,13 @@
             logToConsole("Initiating web boot sequence...");
             updateGUI("Jarvis Web Initializing...", "processing");
 
+            // Initially hide all elements for the boot animation
             document.querySelectorAll('.hud-container > *').forEach(el => el.style.opacity = '0');
-            document.querySelector('.hud-container').style.opacity = '0';
+            document.querySelector('.hud-container').style.opacity = '0'; // Hide container itself
 
             let delay = 0;
             const bootElements = [
-                document.querySelector('.hud-container'),
+                document.querySelector('.hud-container'), // Fade in container first
                 document.querySelector('.hud-border-inner'),
                 ...document.querySelectorAll('.corner-accent'),
                 document.querySelector('.jarvis-title'),
@@ -568,30 +610,37 @@
                     el.style.transition = 'opacity 0.5s ease-in';
                     el.style.opacity = '1';
                     if (el.classList.contains('hud-container')) {
-                        el.style.transition = 'opacity 1s ease-in';
+                        el.style.transition = 'opacity 1s ease-in'; // Slower fade for the main container
                     }
                     if (index === bootElements.length - 1) {
+                        // After all elements have faded in
                         setTimeout(() => {
                             updateGUI("Jarvis Pro is sleeping. Say 'jarvis' to wake me up.", "sleeping");
+                            logToConsole("Jarvis System Ready.");
+                            logToConsole("Hint: Say 'Jarvis' to activate, then ask a question like 'What is the capital of France?' or 'Open YouTube'.");
+                            
+                            // Ensure voices are loaded before starting listening
                             if (SpeechSynthesis.getVoices().length > 0) {
                                 listenForWakeWord();
                             } else {
+                                // If voices aren't loaded yet, wait for the event
                                 SpeechSynthesis.onvoiceschanged = () => {
                                     populateVoiceList();
                                     listenForWakeWord();
                                 };
                             }
-                        }, 500);
+                        }, 1000); // A small delay after everything is visible
                     }
                 }, delay);
-                delay += 100;
+                delay += 100; // Stagger the fade-in of elements
             });
         }
 
+        // --- Initialization on Document Load ---
         document.addEventListener('DOMContentLoaded', () => {
-            updateSimulatedData();
-            populateVoiceList();
-            startBootSequence();
+            updateSimulatedData(); // Start data updates immediately
+            populateVoiceList();   // Populate voice options
+            startBootSequence();   // Initiate the visual boot sequence and then voice listening
         });
 
     </script>
