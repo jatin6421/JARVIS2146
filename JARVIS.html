@@ -381,7 +381,6 @@
             logToConsole("Web Speech API not found. Voice features will not work.");
         }
 
-        // --- MODIFIED populateVoiceList function ---
         function populateVoiceList() {
             const voices = SpeechSynthesis.getVoices();
             voiceSelect.innerHTML = ''; // Clear existing options
@@ -585,7 +584,7 @@
 
             if (query.includes('open youtube')) {
                 speak("Opening YouTube.");
-                window.open("https://www.youtube.com", '_blank'); // Corrected URL: changed googleusercontent to youtube.com
+                window.open("https://www.youtube.com", '_blank'); // Corrected URL
             } else if (query.includes('open google')) {
                 speak("Opening Google.");
                 window.open("https://www.google.com", '_blank');
@@ -651,6 +650,18 @@
             logToConsole("Initiating web boot sequence...");
             updateGUI("Jarvis Web Initializing...", "processing");
 
+            // --- New: Play boot sound ---
+            const bootSound = new Audio('boot_sound.mp3'); // Path to your sound file
+            bootSound.volume = 0.5; // Adjust volume if needed
+
+            // Attempt to play the sound. This might fail due to browser autoplay policies.
+            bootSound.play().then(() => {
+                logToConsole("Boot sound played.");
+            }).catch(error => {
+                logToConsole(`Could not play boot sound automatically: ${error.message}. User interaction might be required.`);
+            });
+            // --- End New ---
+
             // Initially hide all elements for the boot animation
             document.querySelectorAll('.hud-container > *').forEach(el => el.style.opacity = '0');
             document.querySelector('.hud-container').style.opacity = '0'; // Hide container itself
@@ -678,21 +689,34 @@
                     if (index === bootElements.length - 1) {
                         // After all elements have faded in
                         setTimeout(() => {
-                            updateGUI("Jarvis Pro is sleeping. Say 'jarvis' to wake me up.", "sleeping");
-                            logToConsole("Jarvis System Ready. AI voice enabled."); // Clarified message
+                            const currentHour = new Date().getHours();
+                            let greeting;
+                            if (currentHour < 12) {
+                                greeting = "Good morning, sir.";
+                            } else if (currentHour < 18) {
+                                greeting = "Good afternoon, sir.";
+                            } else {
+                                greeting = "Good evening, sir.";
+                            }
+
+                            // --- New: Jarvis speaks greeting after boot sound (or if sound failed) ---
+                            speak(greeting + " Jarvis system online and ready.");
+                            // The speak function's onend will handle initiating listenForWakeWord
+                            // --- End New ---
+
+                            logToConsole("Jarvis System Ready. AI voice enabled.");
                             logToConsole("Hint: Say 'Jarvis' to activate, then ask a question like 'What is the capital of France?' or 'Open YouTube'.");
 
-                            // Ensure voices are loaded before starting listening
-                            if (SpeechSynthesis.getVoices().length > 0) {
-                                listenForWakeWord();
-                            } else {
-                                // If voices aren't loaded yet, wait for the event
-                                SpeechSynthesis.onvoiceschanged = () => {
-                                    populateVoiceList();
-                                    listenForWakeWord();
-                                };
+                            // If speak() doesn't trigger listenForWakeWord due to an error, ensure it starts.
+                            // This next part will be handled by speak()'s onend event.
+                            // However, if speak fails or there's no voice, we need a fallback.
+                            if (!SpeechSynthesis.speaking && SpeechSynthesis.getVoices().length > 0) {
+                                setTimeout(listenForWakeWord, 2000); // Fallback if speak doesn't initiate it
+                            } else if (SpeechSynthesis.getVoices().length === 0) {
+                                logToConsole("No speech voices available, cannot speak greeting. Voice commands will be disabled.");
                             }
-                        }, 1000); // A small delay after everything is visible
+
+                        }, 1000); // A small delay after everything is visible, before greeting
                     }
                 }, delay);
                 delay += 100; // Stagger the fade-in of elements
