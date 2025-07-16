@@ -384,7 +384,8 @@
             <div class="voice-buttons">
                 <button id="maleVoiceBtn">Male Voice (Auto)</button>
                 <button id="femaleVoiceBtn">Female Voice (Auto)</button>
-                <button id="muteBtn">Mute Jarvis</button> </div>
+                <button id="muteBtn">Mute Jarvis</button>
+            </div>
         </div>
 
         <div class="central-animation-container">
@@ -402,7 +403,7 @@
         const voiceSelect = document.getElementById('voiceSelect');
         const maleVoiceBtn = document.getElementById('maleVoiceBtn');
         const femaleVoiceBtn = document.getElementById('femaleVoiceBtn');
-        const muteBtn = document.getElementById('muteBtn'); // NEW: Get mute button
+        const muteBtn = document.getElementById('muteBtn');
 
         // Elements for the system health widget
         const cpuValue = document.getElementById('cpuValue');
@@ -418,7 +419,7 @@
 
         let currentState = "sleeping";
         let currentVoice = null; // Store the selected SpeechSynthesisVoice object
-        let isMuted = false; // NEW: Mute state variable
+        let isMuted = false;
 
         // --- Audio elements for sound effects ---
         const audioContext = new (window.AudioContext || window.webkitAudioContext)(); // For better audio control
@@ -431,7 +432,7 @@
             try {
                 const response = await fetch(url);
                 const arrayBuffer = await response.arrayBuffer();
-                const audioBuffer = await audioContext.decodeDecodeData(arrayBuffer);
+                const audioBuffer = await audioContext.decodeAudioData(arrayBuffer); // Corrected: decodeAudioData
                 logToConsole(`Sound loaded: ${url}`);
                 return audioBuffer;
             } catch (error) {
@@ -443,7 +444,7 @@
 
         // Function to play a loaded sound buffer
         function playSound(buffer, volume = 0.7) {
-            if (buffer && !isMuted) { // NEW: Check mute state before playing sound effects
+            if (buffer && !isMuted) {
                 const source = audioContext.createBufferSource();
                 source.buffer = buffer;
                 const gainNode = audioContext.createGain();
@@ -490,8 +491,7 @@
                 case 'error':
                     stateAnimation.style.display = 'none';
                     statusDisplay.style.color = '#FF0000'; // Change text to red on error
-                    // Play error sound (already checks isMuted)
-                    playSound(errorAlertBuffer);
+                    playSound(errorAlertBuffer); // Already checks isMuted internally
                     break;
                 default: // 'idle' or unhandled states
                     stateAnimation.style.display = 'none';
@@ -513,12 +513,12 @@
 
             recognition.onstart = () => {
                 updateGUI("Listening for command...", "listening");
-                playSound(listeningBeepBuffer); // Play beep when listening starts
+                playSound(listeningBeepBuffer);
             };
 
             recognition.onresult = (event) => {
                 const transcript = event.results[0][0].transcript.toLowerCase();
-                updateGUI(`User said: "${transcript}"`, "idle"); // Keep the status concise
+                updateGUI(`User said: "${transcript}"`, "idle");
                 handleCommand(transcript);
             };
 
@@ -530,19 +530,18 @@
                 } else if (event.error === 'no-speech') {
                     updateGUI("No speech detected. Going back to sleep.", "sleeping");
                     logToConsole("No speech detected after listening.");
-                    setTimeout(listenForWakeWord, 500); // Re-enable wake word listening
+                    setTimeout(listenForWakeWord, 500);
                 } else {
                     updateGUI(`Speech recognition error: ${event.error}`, "error");
                     logToConsole(`Speech recognition error: ${event.error}`);
-                    setTimeout(listenForWakeWord, 2000); // Attempt to restart wake word listening after error
+                    setTimeout(listenForWakeWord, 2000);
                 }
             };
 
             recognition.onend = () => {
-                // Only go back to wake word if not currently speaking or processing
                 if (currentState !== "speaking" && currentState !== "processing" && currentState !== "error") {
-                    updateGUI("Ready for command.", "idle"); // Brief idle state
-                    setTimeout(listenForWakeWord, 500); // Go back to wake word listening shortly
+                    updateGUI("Ready for command.", "idle");
+                    setTimeout(listenForWakeWord, 500);
                 }
             };
 
@@ -553,7 +552,7 @@
 
         function populateVoiceList() {
             const voices = SpeechSynthesis.getVoices();
-            voiceSelect.innerHTML = ''; // Clear existing options
+            voiceSelect.innerHTML = '';
 
             if (voices.length === 0) {
                 logToConsole("No speech synthesis voices available.");
@@ -561,23 +560,21 @@
                 option.textContent = "No voices found";
                 voiceSelect.appendChild(option);
                 voiceSelect.disabled = true;
-                // Also disable buttons if no voices
                 if (maleVoiceBtn) maleVoiceBtn.disabled = true;
                 if (femaleVoiceBtn) femaleVoiceBtn.disabled = true;
-                if (muteBtn) muteBtn.disabled = true; // NEW: Disable mute button too
+                if (muteBtn) muteBtn.disabled = true;
                 return;
             }
 
-            // Categorize voices
             const maleVoices = [];
             const femaleVoices = [];
-            const otherVoices = []; // For voices where gender is not easily identifiable
+            const otherVoices = [];
 
             voices.forEach(voice => {
                 const voiceNameLower = voice.name.toLowerCase();
                 const voiceLangLower = voice.lang.toLowerCase();
 
-                if (voiceLangLower.startsWith('en')) { // Prioritize English voices
+                if (voiceLangLower.startsWith('en')) {
                     if (voiceNameLower.includes('male') || voiceNameLower.includes('david')) {
                         maleVoices.push(voice);
                     } else if (voiceNameLower.includes('female') || voiceNameLower.includes('zira') || voiceNameLower.includes('anna')) {
@@ -590,18 +587,16 @@
                         otherVoices.push(voice);
                     }
                 } else {
-                    otherVoices.push(voice); // Non-English voices
+                    otherVoices.push(voice);
                 }
             });
 
-            // Sort voices alphabetically by name within their categories
             maleVoices.sort((a, b) => a.name.localeCompare(b.name));
             femaleVoices.sort((a, b) => a.name.localeCompare(b.name));
             otherVoices.sort((a, b) => a.name.localeCompare(b.name));
 
             let selectedDefaultVoice = null;
 
-            // Add voices to the select dropdown, categorized
             const addVoiceOptions = (voicesArray, label) => {
                 if (voicesArray.length > 0) {
                     const optgroup = document.createElement('optgroup');
@@ -613,9 +608,7 @@
                         option.value = voice.name;
                         optgroup.appendChild(option);
 
-                        // Try to set an initial default based on preference (e.g., a specific male or female English voice)
                         if (!selectedDefaultVoice && voice.lang.startsWith('en')) {
-                            // Prioritize certain well-known default voices if available
                             if (voice.name.includes('Google US English') && voice.name.includes('Male')) {
                                 selectedDefaultVoice = voice;
                             } else if (voice.name.includes('Microsoft David') && !selectedDefaultVoice) {
@@ -636,11 +629,10 @@
             addVoiceOptions(otherVoices, 'Other Voices');
 
 
-            // Set the selected voice for dropdown and currentVoice variable
             if (selectedDefaultVoice) {
                 voiceSelect.value = selectedDefaultVoice.name;
                 currentVoice = selectedDefaultVoice;
-            } else if (voices.length > 0) { // Fallback to the first available voice if no preferred default is found
+            } else if (voices.length > 0) {
                 voiceSelect.selectedIndex = 0;
                 currentVoice = voices[0];
             }
@@ -652,7 +644,6 @@
             }
 
 
-            // --- Event listener for dropdown change ---
             voiceSelect.addEventListener('change', () => {
                 const selectedVoiceName = voiceSelect.value;
                 currentVoice = voices.find(voice => voice.name === selectedVoiceName);
@@ -662,13 +653,12 @@
                 }
             });
 
-            // --- Event listeners for new buttons ---
             if (maleVoiceBtn) {
                 maleVoiceBtn.addEventListener('click', () => {
-                    const maleVoice = maleVoices.length > 0 ? maleVoices[0] : null; // Get first male voice
+                    const maleVoice = maleVoices.length > 0 ? maleVoices[0] : null;
                     if (maleVoice) {
                         currentVoice = maleVoice;
-                        voiceSelect.value = maleVoice.name; // Update dropdown to reflect button choice
+                        voiceSelect.value = maleVoice.name;
                         logToConsole(`AI Voice changed to: ${currentVoice.name} via Male button.`);
                         speak("Male voice selected.");
                     } else {
@@ -680,10 +670,10 @@
 
             if (femaleVoiceBtn) {
                 femaleVoiceBtn.addEventListener('click', () => {
-                    const femaleVoice = femaleVoices.length > 0 ? femaleVoices[0] : null; // Get first female voice
+                    const femaleVoice = femaleVoices.length > 0 ? femaleVoices[0] : null;
                     if (femaleVoice) {
                         currentVoice = femaleVoice;
-                        voiceSelect.value = femaleVoice.name; // Update dropdown to reflect button choice
+                        voiceSelect.value = femaleVoice.name;
                         logToConsole(`AI Voice changed to: ${currentVoice.name} via Female button.`);
                         speak("Female voice selected.");
                     } else {
@@ -693,12 +683,11 @@
                 });
             }
 
-            // NEW: Mute Button Event Listener
             if (muteBtn) {
                 muteBtn.addEventListener('click', () => {
-                    isMuted = !isMuted; // Toggle mute state
+                    isMuted = !isMuted;
                     if (isMuted) {
-                        SpeechSynthesis.cancel(); // Stop any ongoing speech immediately
+                        SpeechSynthesis.cancel();
                         muteBtn.textContent = 'Unmute Jarvis';
                         muteBtn.classList.add('muted');
                         logToConsole("Jarvis is now muted.");
@@ -706,66 +695,62 @@
                         muteBtn.textContent = 'Mute Jarvis';
                         muteBtn.classList.remove('muted');
                         logToConsole("Jarvis is now unmuted.");
-                        speak("I am unmuted."); // Jarvis confirms unmuting
+                        speak("I am unmuted.");
                     }
                 });
             }
         }
 
-        // Event listener for when voices are loaded/changed
         if (SpeechSynthesis.onvoiceschanged !== undefined) {
             SpeechSynthesis.onvoiceschanged = populateVoiceList;
         } else {
-            // Fallback for browsers that don't fire onvoiceschanged immediately
             setTimeout(populateVoiceList, 500);
         }
 
 
         function speak(text) {
-            if (SpeechSynthesis && currentVoice && !isMuted) { // NEW: Check isMuted
-                SpeechSynthesis.cancel(); // Stop any current speech
+            if (SpeechSynthesis && currentVoice && !isMuted) {
+                SpeechSynthesis.cancel();
 
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.voice = currentVoice;
                 utterance.lang = currentVoice.lang;
-                utterance.rate = 1.0; // Normal speed
-                utterance.pitch = 1.0; // Normal pitch
+                utterance.rate = 1.0;
+                utterance.pitch = 1.0;
 
                 utterance.onstart = () => {
                     updateGUI(`Jarvis: "${text}"`, "speaking");
                 };
                 utterance.onend = () => {
-                    if (currentState === "speaking") { // Only reset if still speaking state
+                    if (currentState === "speaking") {
                         updateGUI("Ready for command.", "idle");
-                        setTimeout(listenForWakeWord, 500); // Re-enable wake word listener
+                        setTimeout(listenForWakeWord, 500);
                     }
                 };
                 utterance.onerror = (event) => {
                     logToConsole(`Speech synthesis error: ${event.error}`);
                     updateGUI(`Jarvis (Voice Error): "${text}"`, "error");
-                    setTimeout(listenForWakeWord, 500); // Re-enable wake word listener after error
+                    setTimeout(listenForWakeWord, 500);
                 };
                 SpeechSynthesis.speak(utterance);
             } else {
-                if (!isMuted) { // Only log this if not explicitly muted
+                if (!isMuted) {
                     updateGUI(`Jarvis (No Voice): "${text}"`, "idle");
                     logToConsole("Speech synthesis not available or no voice selected. Cannot speak.");
                 } else {
-                    logToConsole(`Jarvis (Muted): "${text}"`); // Log message even if muted
+                    logToConsole(`Jarvis (Muted): "${text}"`);
                 }
-                setTimeout(listenForWakeWord, 500); // Continue listening for commands even without voice
+                setTimeout(listenForWakeWord, 500);
             }
         }
 
         function listenForWakeWord() {
-            if (recognition && SpeechSynthesis) { // Only attempt if speech APIs are available
+            if (recognition && SpeechSynthesis) {
                 if (SpeechSynthesis.speaking) {
-                    // Don't start listening if Jarvis is still speaking
                     setTimeout(listenForWakeWord, 500);
                     return;
                 }
 
-                // If muted, change status display but don't play sound
                 if (isMuted) {
                     updateGUI("Jarvis Pro is sleeping (Muted). Say 'jarvis' to wake me up.", "sleeping");
                 } else {
@@ -774,22 +759,20 @@
 
                 try {
                     recognition.start();
-                    // Set a timeout to stop listening if no wake word is detected
                     setTimeout(() => {
                         if (recognition && recognition.listening && currentState === "sleeping") {
                             recognition.stop();
-                            if (!isMuted) { // Only speak if not muted
+                            if (!isMuted) {
                                 speak("No wake word detected. Back to sleep.");
                             } else {
                                 updateGUI("No wake word detected. Back to sleep.", "sleeping");
                             }
                             logToConsole("Timeout: No wake word heard.");
                         }
-                    }, 7000); // Listen for wake word for 7 seconds
+                    }, 7000);
                 } catch (e) {
                     logToConsole("Error starting speech recognition for wake word: " + e.message);
                     if (e.message.includes("already started")) {
-                        // This error can happen if onend hasn't fired yet
                         // Ignore or handle gracefully
                     } else {
                         updateGUI("Error with mic, check permissions.", "error");
@@ -801,12 +784,10 @@
             }
         }
 
-        // --- Command Handling (All general queries now go to Gemini via Backend) ---
         async function handleCommand(query) {
             updateGUI(`Processing: "${query}"`, "processing");
-            playSound(commandAckBuffer); // Play a sound indicating command received/processing started
+            playSound(commandAckBuffer);
 
-            // Simple direct commands
             if (query.includes('jarvis')) {
                 speak("Yes, how can I help you?");
                 return;
@@ -814,7 +795,7 @@
 
             if (query.includes('open youtube')) {
                 speak("Opening YouTube.");
-                window.open("http://youtube.com/", '_blank');
+                window.open("https://www.youtube.com", '_blank'); // Corrected URL
             } else if (query.includes('open google')) {
                 speak("Opening Google.");
                 window.open("https://www.google.com", '_blank');
@@ -833,13 +814,12 @@
                 speak("Goodbye! Have a great day.");
                 updateGUI("Jarvis Pro stopped.", "idle");
                 if (recognition && recognition.listening) {
-                    recognition.stop(); // Manually stop recognition
+                    recognition.stop();
                 }
                 return;
             }
-            // --- ALL OTHER QUERIES GO TO GEMINI VIA BACKEND ---
             else {
-                speak("Let me think..."); // Indicate that AI processing is about to begin
+                speak("Let me think...");
                 updateGUI("Querying AI...", "processing");
                 try {
                     const response = await fetch(`${BACKEND_BASE_URL}/api/gemini`, {
@@ -862,11 +842,10 @@
             }
         }
 
-        // --- Simulated Data Readouts & Date/Time Update ---
         function updateSimulatedData() {
-            const cpu = Math.floor(Math.random() * 60) + 20; // 20-80%
-            const ram = Math.floor(Math.random() * 60) + 30; // 30-90%
-            const net = Math.floor(Math.random() * 490) + 10; // 10-500 Kb/s
+            const cpu = Math.floor(Math.random() * 60) + 20;
+            const ram = Math.floor(Math.random() * 60) + 30;
+            const net = Math.floor(Math.random() * 490) + 10;
 
             cpuValue.textContent = `${cpu}%`;
             cpuBar.style.width = `${cpu}%`;
@@ -879,20 +858,20 @@
             ramBar.classList.toggle('red', ram > 90);
 
             netValue.textContent = `${net}Kb/s`;
-            netBar.style.width = `${(net / 500) * 100}%`; // Normalize to 100% based on max 500Kb/s
+            netBar.style.width = `${(net / 500) * 100}%`;
             netBar.classList.toggle('yellow', net > 300);
             netBar.classList.toggle('red', net > 450);
 
             let statusText = "Optimal";
             if (cpu > 80 || ram > 85 || net > 400) {
                 statusText = "High Load";
-                systemStatus.style.color = '#FFAA00'; // Orange for high load
+                systemStatus.style.color = '#FFAA00';
             }
             if (cpu > 90 || ram > 95 || net > 480) {
                  statusText = "Critical!";
-                 systemStatus.style.color = '#FF0000'; // Red for critical
+                 systemStatus.style.color = '#FF0000';
             } else if (cpu <= 80 && ram <= 85 && net <= 400) {
-                 systemStatus.style.color = '#00FFFF'; // Reset to default if conditions improve
+                 systemStatus.style.color = '#00FFFF';
             }
             systemStatus.textContent = statusText;
 
@@ -905,47 +884,40 @@
         }
         setInterval(updateSimulatedData, 1000);
 
-        // --- Boot Sequence Simulation ---
         async function startBootSequence() {
             logToConsole("Initiating web boot sequence...");
             updateGUI("Jarvis Web Initializing...", "processing");
 
-            // Load all sounds upfront
             listeningBeepBuffer = await loadSound('listening_beep.mp3');
             commandAckBuffer = await loadSound('command_ack.mp3');
             errorAlertBuffer = await loadSound('error_alert.mp3');
 
-            // Play boot sound (using Audio object as it's a longer, background sound)
-            const bootSound = new Audio('boot_sound.mp3'); // Path to your sound file
-            bootSound.volume = 0.5; // Adjust volume if needed
+            const bootSound = new Audio('boot_sound.mp3');
+            bootSound.volume = 0.5;
 
-            // Attempt to play the sound. This might fail due to browser autoplay policies.
-            // Using a Promise to ensure we only proceed after the sound has *attempted* to play.
             let bootSoundPlayed = false;
-            if (!isMuted) { // Only play boot sound if not muted
+            if (!isMuted) {
                 bootSound.play().then(() => {
                     logToConsole("Boot sound played.");
                     bootSoundPlayed = true;
                 }).catch(error => {
                     logToConsole(`Could not play boot sound automatically: ${error.message}. User interaction might be required.`);
-                    bootSoundPlayed = true; // Still set true to proceed with boot sequence
+                    bootSoundPlayed = true;
                 });
             } else {
                  logToConsole("Boot sound skipped because Jarvis is muted.");
                  bootSoundPlayed = true;
             }
 
-            // Wait a moment for boot sound to start (or fail)
             await new Promise(resolve => setTimeout(resolve, 500));
 
 
-            // Initially hide all elements for the boot animation
             document.querySelectorAll('.hud-container > *').forEach(el => el.style.opacity = '0');
-            document.querySelector('.hud-container').style.opacity = '0'; // Hide container itself
+            document.querySelector('.hud-container').style.opacity = '0';
 
             let delay = 0;
             const bootElements = [
-                document.querySelector('.hud-container'), // Fade in container first
+                document.querySelector('.hud-container'),
                 document.querySelector('.hud-border-inner'),
                 ...document.querySelectorAll('.corner-accent'),
                 document.querySelector('.jarvis-title'),
@@ -961,10 +933,9 @@
                     el.style.transition = 'opacity 0.5s ease-in';
                     el.style.opacity = '1';
                     if (el.classList.contains('hud-container')) {
-                        el.style.transition = 'opacity 1s ease-in'; // Slower fade for the main container
+                        el.style.transition = 'opacity 1s ease-in';
                     }
                     if (index === bootElements.length - 1) {
-                        // After all elements have faded in
                         setTimeout(() => {
                             const currentHour = new Date().getHours();
                             let greeting;
@@ -980,25 +951,23 @@
                             logToConsole("Jarvis System Ready. AI voice enabled.");
                             logToConsole("Hint: Say 'Jarvis' to activate, then ask a question like 'What is the capital of France?' or 'Open YouTube'.");
 
-                            // If speak() doesn't trigger listenForWakeWord due to an error, ensure it starts.
                             if (!SpeechSynthesis.speaking && SpeechSynthesis.getVoices().length > 0) {
-                                setTimeout(listenForWakeWord, 2000); // Fallback if speak doesn't initiate it
+                                setTimeout(listenForWakeWord, 2000);
                             } else if (SpeechSynthesis.getVoices().length === 0) {
                                 logToConsole("No speech voices available, cannot speak greeting. Voice commands will be disabled.");
                             }
 
-                        }, 1000); // A small delay after everything is visible, before greeting
+                        }, 1000);
                     }
                 }, delay);
-                delay += 100; // Stagger the fade-in of elements
+                delay += 100;
             });
         }
 
-        // --- Initialization on Document Load ---
         document.addEventListener('DOMContentLoaded', () => {
-            updateSimulatedData(); // Start data updates immediately
-            populateVoiceList();   // Populate voice options
-            startBootSequence();   // Initiate the visual boot sequence and then voice listening
+            updateSimulatedData();
+            populateVoiceList();
+            startBootSequence();
         });
     </script>
 </body>
