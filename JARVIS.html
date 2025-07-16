@@ -431,7 +431,6 @@
             <select id="voiceSelect"></select>
             <div class="voice-buttons">
                 <button id="maleVoiceBtn">Male Voice (Auto)</button>
-                <button id="femaleVoiceBtn">Female Voice (Auto)</button>
                 <button id="muteBtn">Mute Jarvis</button>
             </div>
         </div>
@@ -450,7 +449,7 @@
         const stateAnimation = document.getElementById('stateAnimation');
         const voiceSelect = document.getElementById('voiceSelect');
         const maleVoiceBtn = document.getElementById('maleVoiceBtn');
-        const femaleVoiceBtn = document.getElementById('femaleVoiceBtn');
+        // Removed reference to femaleVoiceBtn here
         const muteBtn = document.getElementById('muteBtn');
         const initialOverlay = document.getElementById('initialOverlay');
         const startButton = document.getElementById('startButton');
@@ -621,29 +620,25 @@
                 voiceSelect.appendChild(option);
                 voiceSelect.disabled = true;
                 if (maleVoiceBtn) maleVoiceBtn.disabled = true;
-                if (femaleVoiceBtn) femaleVoiceBtn.disabled = true;
+                // Removed femaleVoiceBtn disable here
                 if (muteBtn) muteBtn.disabled = true;
                 return;
             }
 
             const maleVoices = [];
-            const femaleVoices = [];
-            const otherVoices = [];
+            // Removed femaleVoices array
+            const otherVoices = []; // To catch any remaining English or non-English voices
 
             voices.forEach(voice => {
                 const voiceNameLower = voice.name.toLowerCase();
                 const voiceLangLower = voice.lang.toLowerCase();
 
                 if (voiceLangLower.startsWith('en')) {
-                    if (voiceNameLower.includes('male') || voiceNameLower.includes('david')) {
+                    // Only add to maleVoices if it explicitly seems male or is not female
+                    if (voiceNameLower.includes('male') || voiceNameLower.includes('david') || voice.gender === 'male' || (!voiceNameLower.includes('female') && !voiceNameLower.includes('zira') && !voiceNameLower.includes('anna'))) {
                         maleVoices.push(voice);
-                    } else if (voiceNameLower.includes('female') || voiceNameLower.includes('zira') || voiceNameLower.includes('anna')) {
-                        femaleVoices.push(voice);
-                    } else if (voice.gender === 'male') {
-                        maleVoices.push(voice);
-                    } else if (voice.gender === 'female') {
-                        femaleVoices.push(voice);
                     } else {
+                        // Any remaining English voices that might be female but we don't want to explicitly list, or unidentifiable
                         otherVoices.push(voice);
                     }
                 } else {
@@ -652,7 +647,6 @@
             });
 
             maleVoices.sort((a, b) => a.name.localeCompare(b.name));
-            femaleVoices.sort((a, b) => a.name.localeCompare(b.name));
             otherVoices.sort((a, b) => a.name.localeCompare(b.name));
 
             let selectedDefaultVoice = null;
@@ -668,15 +662,11 @@
                         option.value = voice.name;
                         optgroup.appendChild(option);
 
-                        // Prioritize English voices, then common male/female names
+                        // Prioritize male English voices as the default
                         if (!selectedDefaultVoice && voice.lang.startsWith('en')) {
                             if (voice.name.includes('Google US English') && voice.name.includes('Male')) {
                                 selectedDefaultVoice = voice;
                             } else if (voice.name.includes('Microsoft David') && !selectedDefaultVoice) {
-                                selectedDefaultVoice = voice;
-                            } else if (voice.name.includes('Google US English') && voice.name.includes('Female') && !selectedDefaultVoice) {
-                                selectedDefaultVoice = voice;
-                            } else if (voice.name.includes('Microsoft Zira') && !selectedDefaultVoice) {
                                 selectedDefaultVoice = voice;
                             }
                         }
@@ -686,18 +676,22 @@
             };
 
             addVoiceOptions(maleVoices, 'Male Voices');
-            addVoiceOptions(femaleVoices, 'Female Voices');
             addVoiceOptions(otherVoices, 'Other Voices');
 
 
             if (selectedDefaultVoice) {
                 voiceSelect.value = selectedDefaultVoice.name;
                 currentVoice = selectedDefaultVoice;
+            } else if (maleVoices.length > 0) {
+                // If no specific default found, pick the first available male voice
+                currentVoice = maleVoices[0];
+                voiceSelect.value = currentVoice.name;
             } else if (voices.length > 0) {
-                // If no specific default found, just pick the first available English voice
-                currentVoice = voices.find(v => v.lang.startsWith('en')) || voices[0];
+                // Fallback to any voice if no male is found, to ensure functionality
+                currentVoice = voices[0];
                 voiceSelect.value = currentVoice.name;
             }
+
 
             if (currentVoice) {
                 logToConsole(`Initial AI Voice: ${currentVoice.name}`);
@@ -728,18 +722,7 @@
                 }
             });
 
-            femaleVoiceBtn.addEventListener('click', () => {
-                const femaleVoice = femaleVoices.length > 0 ? femaleVoices[0] : null;
-                if (femaleVoice) {
-                    currentVoice = femaleVoice;
-                    voiceSelect.value = femaleVoice.name;
-                    logToConsole(`AI Voice changed to: ${currentVoice.name} via Female button.`);
-                    speak("Female voice selected.");
-                } else {
-                    logToConsole("No female voice found to select.");
-                    speak("Sorry, I could not find a female voice.");
-                }
-            });
+            // Removed femaleVoiceBtn event listener
 
             muteBtn.addEventListener('click', () => {
                 isMuted = !isMuted;
