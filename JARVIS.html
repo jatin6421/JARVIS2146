@@ -324,6 +324,19 @@
             color: #050505;
             box-shadow: 0 0 8px #00FFFF;
         }
+
+        /* Style for the mute button specifically */
+        #muteBtn.muted {
+            background-color: #FF0000; /* Red when muted */
+            border-color: #FF5500;
+            color: #FFFFFF;
+        }
+        #muteBtn.muted:hover {
+            background-color: #CC0000;
+            border-color: #FF0000;
+            box-shadow: 0 0 8px #FF0000;
+        }
+
     </style>
 </head>
 <body>
@@ -371,7 +384,7 @@
             <div class="voice-buttons">
                 <button id="maleVoiceBtn">Male Voice (Auto)</button>
                 <button id="femaleVoiceBtn">Female Voice (Auto)</button>
-            </div>
+                <button id="muteBtn">Mute Jarvis</button> </div>
         </div>
 
         <div class="central-animation-container">
@@ -389,6 +402,7 @@
         const voiceSelect = document.getElementById('voiceSelect');
         const maleVoiceBtn = document.getElementById('maleVoiceBtn');
         const femaleVoiceBtn = document.getElementById('femaleVoiceBtn');
+        const muteBtn = document.getElementById('muteBtn'); // NEW: Get mute button
 
         // Elements for the system health widget
         const cpuValue = document.getElementById('cpuValue');
@@ -404,6 +418,7 @@
 
         let currentState = "sleeping";
         let currentVoice = null; // Store the selected SpeechSynthesisVoice object
+        let isMuted = false; // NEW: Mute state variable
 
         // --- Audio elements for sound effects ---
         const audioContext = new (window.AudioContext || window.webkitAudioContext)(); // For better audio control
@@ -416,7 +431,7 @@
             try {
                 const response = await fetch(url);
                 const arrayBuffer = await response.arrayBuffer();
-                const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                const audioBuffer = await audioContext.decodeDecodeData(arrayBuffer);
                 logToConsole(`Sound loaded: ${url}`);
                 return audioBuffer;
             } catch (error) {
@@ -428,7 +443,7 @@
 
         // Function to play a loaded sound buffer
         function playSound(buffer, volume = 0.7) {
-            if (buffer) {
+            if (buffer && !isMuted) { // NEW: Check mute state before playing sound effects
                 const source = audioContext.createBufferSource();
                 source.buffer = buffer;
                 const gainNode = audioContext.createGain();
@@ -475,7 +490,7 @@
                 case 'error':
                     stateAnimation.style.display = 'none';
                     statusDisplay.style.color = '#FF0000'; // Change text to red on error
-                    // Play error sound
+                    // Play error sound (already checks isMuted)
                     playSound(errorAlertBuffer);
                     break;
                 default: // 'idle' or unhandled states
@@ -549,6 +564,7 @@
                 // Also disable buttons if no voices
                 if (maleVoiceBtn) maleVoiceBtn.disabled = true;
                 if (femaleVoiceBtn) femaleVoiceBtn.disabled = true;
+                if (muteBtn) muteBtn.disabled = true; // NEW: Disable mute button too
                 return;
             }
 
@@ -676,6 +692,24 @@
                     }
                 });
             }
+
+            // NEW: Mute Button Event Listener
+            if (muteBtn) {
+                muteBtn.addEventListener('click', () => {
+                    isMuted = !isMuted; // Toggle mute state
+                    if (isMuted) {
+                        SpeechSynthesis.cancel(); // Stop any ongoing speech immediately
+                        muteBtn.textContent = 'Unmute Jarvis';
+                        muteBtn.classList.add('muted');
+                        logToConsole("Jarvis is now muted.");
+                    } else {
+                        muteBtn.textContent = 'Mute Jarvis';
+                        muteBtn.classList.remove('muted');
+                        logToConsole("Jarvis is now unmuted.");
+                        speak("I am unmuted."); // Jarvis confirms unmuting
+                    }
+                });
+            }
         }
 
         // Event listener for when voices are loaded/changed
@@ -688,7 +722,7 @@
 
 
         function speak(text) {
-            if (SpeechSynthesis && currentVoice) {
+            if (SpeechSynthesis && currentVoice && !isMuted) { // NEW: Check isMuted
                 SpeechSynthesis.cancel(); // Stop any current speech
 
                 const utterance = new SpeechSynthesisUtterance(text);
@@ -713,8 +747,12 @@
                 };
                 SpeechSynthesis.speak(utterance);
             } else {
-                updateGUI(`Jarvis (No Voice): "${text}"`, "idle");
-                logToConsole("Speech synthesis not available or no voice selected. Cannot speak.");
+                if (!isMuted) { // Only log this if not explicitly muted
+                    updateGUI(`Jarvis (No Voice): "${text}"`, "idle");
+                    logToConsole("Speech synthesis not available or no voice selected. Cannot speak.");
+                } else {
+                    logToConsole(`Jarvis (Muted): "${text}"`); // Log message even if muted
+                }
                 setTimeout(listenForWakeWord, 500); // Continue listening for commands even without voice
             }
         }
@@ -727,14 +765,24 @@
                     return;
                 }
 
-                updateGUI("Jarvis Pro is sleeping. Say 'jarvis' to wake me up.", "sleeping");
+                // If muted, change status display but don't play sound
+                if (isMuted) {
+                    updateGUI("Jarvis Pro is sleeping (Muted). Say 'jarvis' to wake me up.", "sleeping");
+                } else {
+                    updateGUI("Jarvis Pro is sleeping. Say 'jarvis' to wake me up.", "sleeping");
+                }
+
                 try {
                     recognition.start();
                     // Set a timeout to stop listening if no wake word is detected
                     setTimeout(() => {
                         if (recognition && recognition.listening && currentState === "sleeping") {
                             recognition.stop();
-                            updateGUI("No wake word detected. Back to sleep.", "sleeping");
+                            if (!isMuted) { // Only speak if not muted
+                                speak("No wake word detected. Back to sleep.");
+                            } else {
+                                updateGUI("No wake word detected. Back to sleep.", "sleeping");
+                            }
                             logToConsole("Timeout: No wake word heard.");
                         }
                     }, 7000); // Listen for wake word for 7 seconds
@@ -874,13 +922,18 @@
             // Attempt to play the sound. This might fail due to browser autoplay policies.
             // Using a Promise to ensure we only proceed after the sound has *attempted* to play.
             let bootSoundPlayed = false;
-            bootSound.play().then(() => {
-                logToConsole("Boot sound played.");
-                bootSoundPlayed = true;
-            }).catch(error => {
-                logToConsole(`Could not play boot sound automatically: ${error.message}. User interaction might be required.`);
-                bootSoundPlayed = true; // Still set true to proceed with boot sequence
-            });
+            if (!isMuted) { // Only play boot sound if not muted
+                bootSound.play().then(() => {
+                    logToConsole("Boot sound played.");
+                    bootSoundPlayed = true;
+                }).catch(error => {
+                    logToConsole(`Could not play boot sound automatically: ${error.message}. User interaction might be required.`);
+                    bootSoundPlayed = true; // Still set true to proceed with boot sequence
+                });
+            } else {
+                 logToConsole("Boot sound skipped because Jarvis is muted.");
+                 bootSoundPlayed = true;
+            }
 
             // Wait a moment for boot sound to start (or fail)
             await new Promise(resolve => setTimeout(resolve, 500));
