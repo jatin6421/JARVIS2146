@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jarvis Web HUD with Gemini AI Only</title>
+    <title>Jarvis Web HUD (Voice Only) with Gemini AI</title>
     <style>
         body {
             background-color: #050505;
@@ -87,7 +87,6 @@
             z-index: 5;
         }
 
-        /* Replaced .data-readouts with .system-health-widget */
         .system-health-widget {
             position: absolute;
             top: 100px; /* Adjust as needed, maybe to the left or right of status display */
@@ -292,7 +291,7 @@
             color: #00FF00;
         }
 
-        /* New styles for voice buttons */
+        /* Styles for voice buttons */
         .voice-controls .voice-buttons {
             display: flex;
             flex-direction: column;
@@ -321,59 +320,6 @@
         }
 
         .voice-controls .voice-buttons button:active {
-            background-color: #00FFFF;
-            color: #050505;
-            box-shadow: 0 0 8px #00FFFF;
-        }
-
-        /* NEW: Styles for Manual Input */
-        .input-controls {
-            position: absolute;
-            bottom: 180px; /* Adjust this to be above the console output */
-            left: 30px;
-            width: calc(100% - 60px);
-            display: flex;
-            gap: 10px; /* Space between input and button */
-            align-items: center;
-            z-index: 5; /* Ensure it's above other elements if needed */
-        }
-
-        .input-controls input[type="text"] {
-            flex-grow: 1; /* Allows input to take up most space */
-            background-color: #0d0d0d;
-            color: #00FF00;
-            border: 1px solid #00AAFF;
-            padding: 10px;
-            font-family: 'Consolas', monospace;
-            font-size: 14px;
-            box-sizing: border-box;
-        }
-
-        .input-controls input[type="text"]:focus {
-            outline: none;
-            border-color: #00FFFF;
-            box-shadow: 0 0 5px #00FFFF;
-        }
-
-        .input-controls button {
-            background-color: #0d0d0d;
-            color: #00FFFF;
-            border: 1px solid #00AAFF;
-            padding: 10px 15px;
-            font-family: 'Consolas', monospace;
-            font-size: 14px;
-            cursor: pointer;
-            transition: background-color 0.3s, color 0.3s, border-color 0.3s, box-shadow 0.3s;
-        }
-
-        .input-controls button:hover {
-            background-color: #00AAFF;
-            color: #050505;
-            border-color: #00FFFF;
-            box-shadow: 0 0 5px #00FFFF;
-        }
-
-        .input-controls button:active {
             background-color: #00FFFF;
             color: #050505;
             box-shadow: 0 0 8px #00FFFF;
@@ -428,14 +374,8 @@
             </div>
         </div>
 
-
         <div class="central-animation-container">
             <div id="stateAnimation" class="sleeping-animation"></div>
-        </div>
-
-        <div class="input-controls">
-            <input type="text" id="textInput" placeholder="Type your command here..." autocomplete="off">
-            <button id="sendTextBtn">Send Command</button>
         </div>
 
         <textarea id="consoleOutput" class="console-output" readonly></textarea>
@@ -444,14 +384,13 @@
     <script>
         const statusDisplay = document.getElementById('statusDisplay');
         const consoleOutput = document.getElementById('consoleOutput');
-        // REMOVED old cpuReadout, ramReadout, netReadout, as they are replaced by widget
-        const dateTimeReadout = document.getElementById('dateTimeReadout'); // Kept for time display
+        const dateTimeReadout = document.getElementById('dateTimeReadout');
         const stateAnimation = document.getElementById('stateAnimation');
         const voiceSelect = document.getElementById('voiceSelect');
         const maleVoiceBtn = document.getElementById('maleVoiceBtn');
         const femaleVoiceBtn = document.getElementById('femaleVoiceBtn');
 
-        // NEW: Elements for the system health widget
+        // Elements for the system health widget
         const cpuValue = document.getElementById('cpuValue');
         const cpuBar = document.getElementById('cpuBar');
         const ramValue = document.getElementById('ramValue');
@@ -459,10 +398,6 @@
         const netValue = document.getElementById('netValue');
         const netBar = document.getElementById('netBar');
         const systemStatus = document.getElementById('systemStatus');
-
-        // NEW: Elements for manual input
-        const textInput = document.getElementById('textInput');
-        const sendTextBtn = document.getElementById('sendTextBtn');
 
         // --- Configuration for Backend Endpoints ---
         const BACKEND_BASE_URL = "http://127.0.0.1:5000"; // Flask default port
@@ -831,7 +766,7 @@
 
             if (query.includes('open youtube')) {
                 speak("Opening YouTube.");
-                window.open("http://youtube.com", '_blank'); // Corrected URL (removed googleusercontent part)
+                window.open("https://www.youtube.com", '_blank');
             } else if (query.includes('open google')) {
                 speak("Opening Google.");
                 window.open("https://www.google.com", '_blank');
@@ -896,8 +831,6 @@
             ramBar.classList.toggle('red', ram > 90);
 
             netValue.textContent = `${net}Kb/s`;
-            // For network, the bar can represent activity or a hypothetical 'bandwidth usage'
-            // Let's make it represent activity (higher usage = wider bar)
             netBar.style.width = `${(net / 500) * 100}%`; // Normalize to 100% based on max 500Kb/s
             netBar.classList.toggle('yellow', net > 300);
             netBar.classList.toggle('red', net > 450);
@@ -930,7 +863,7 @@
             updateGUI("Jarvis Web Initializing...", "processing");
 
             // Load all sounds upfront
-            listeningBeepBuffer = await loadSound('listening_beep.mp3'); // Make sure these paths are correct!
+            listeningBeepBuffer = await loadSound('listening_beep.mp3');
             commandAckBuffer = await loadSound('command_ack.mp3');
             errorAlertBuffer = await loadSound('error_alert.mp3');
 
@@ -964,11 +897,10 @@
                 ...document.querySelectorAll('.corner-accent'),
                 document.querySelector('.jarvis-title'),
                 document.getElementById('statusDisplay'),
-                document.querySelector('.system-health-widget'), // Changed from data-readouts
+                document.querySelector('.system-health-widget'),
                 document.querySelector('.voice-controls'),
                 document.querySelector('.central-animation-container'),
-                document.querySelector('.input-controls'), // NEW: Include manual input
-                document.getElementById('consoleOutput')
+                document.getElementById('consoleOutput') // Adjusted for previous removal of input-controls
             ];
 
             bootElements.forEach((el, index) => {
@@ -994,8 +926,6 @@
                             speak(greeting + " Jarvis system online and ready.");
                             logToConsole("Jarvis System Ready. AI voice enabled.");
                             logToConsole("Hint: Say 'Jarvis' to activate, then ask a question like 'What is the capital of France?' or 'Open YouTube'.");
-                            logToConsole("You can also type commands into the new input field below!");
-
 
                             // If speak() doesn't trigger listenForWakeWord due to an error, ensure it starts.
                             if (!SpeechSynthesis.speaking && SpeechSynthesis.getVoices().length > 0) {
@@ -1015,26 +945,8 @@
         document.addEventListener('DOMContentLoaded', () => {
             updateSimulatedData(); // Start data updates immediately
             populateVoiceList();   // Populate voice options
-
-            // NEW: Add event listeners for manual input
-            sendTextBtn.addEventListener('click', () => {
-                const command = textInput.value.trim();
-                if (command) {
-                    logToConsole(`Manual input: "${command}"`);
-                    handleCommand(command);
-                    textInput.value = ''; // Clear input field
-                }
-            });
-
-            textInput.addEventListener('keypress', (event) => {
-                if (event.key === 'Enter') {
-                    sendTextBtn.click(); // Trigger button click on Enter key
-                }
-            });
-
             startBootSequence();   // Initiate the visual boot sequence and then voice listening
         });
-
     </script>
 </body>
 </html>
