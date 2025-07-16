@@ -328,6 +328,40 @@
         let currentState = "sleeping";
         let currentVoice = null; // Store the selected SpeechSynthesisVoice object
 
+        // --- Audio elements for sound effects ---
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)(); // For better audio control
+        let listeningBeepBuffer;
+        let commandAckBuffer;
+        let errorAlertBuffer;
+
+        // Function to load audio files
+        async function loadSound(url) {
+            try {
+                const response = await fetch(url);
+                const arrayBuffer = await response.arrayBuffer();
+                const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                logToConsole(`Sound loaded: ${url}`);
+                return audioBuffer;
+            } catch (error) {
+                logToConsole(`Error loading sound ${url}: ${error.message}`);
+                console.error(`Error loading sound ${url}:`, error);
+                return null;
+            }
+        }
+
+        // Function to play a loaded sound buffer
+        function playSound(buffer, volume = 0.7) {
+            if (buffer) {
+                const source = audioContext.createBufferSource();
+                source.buffer = buffer;
+                const gainNode = audioContext.createGain();
+                gainNode.gain.value = volume;
+                source.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                source.start(0);
+            }
+        }
+
         function logToConsole(message) {
             const timestamp = new Date().toLocaleTimeString('en-US', { hour12: false });
             consoleOutput.value += `[${timestamp}] ${message}\n`;
@@ -364,6 +398,8 @@
                 case 'error':
                     stateAnimation.style.display = 'none';
                     statusDisplay.style.color = '#FF0000'; // Change text to red on error
+                    // Play error sound
+                    playSound(errorAlertBuffer);
                     break;
                 default: // 'idle' or unhandled states
                     stateAnimation.style.display = 'none';
@@ -385,6 +421,7 @@
 
             recognition.onstart = () => {
                 updateGUI("Listening for command...", "listening");
+                playSound(listeningBeepBuffer); // Play beep when listening starts
             };
 
             recognition.onresult = (event) => {
@@ -535,7 +572,7 @@
             // --- Event listeners for new buttons ---
             if (maleVoiceBtn) {
                 maleVoiceBtn.addEventListener('click', () => {
-                    const maleVoice = maleVoices.length > 0 ? maleVoices[0] : null;
+                    const maleVoice = maleVoices.length > 0 ? maleVoices[0] : null; // Get first male voice
                     if (maleVoice) {
                         currentVoice = maleVoice;
                         voiceSelect.value = maleVoice.name; // Update dropdown to reflect button choice
@@ -550,7 +587,7 @@
 
             if (femaleVoiceBtn) {
                 femaleVoiceBtn.addEventListener('click', () => {
-                    const femaleVoice = femaleVoices.length > 0 ? femaleVoices[0] : null;
+                    const femaleVoice = femaleVoices.length > 0 ? femaleVoices[0] : null; // Get first female voice
                     if (femaleVoice) {
                         currentVoice = femaleVoice;
                         voiceSelect.value = femaleVoice.name; // Update dropdown to reflect button choice
@@ -642,6 +679,7 @@
         // --- Command Handling (All general queries now go to Gemini via Backend) ---
         async function handleCommand(query) {
             updateGUI(`Processing: "${query}"`, "processing");
+            playSound(commandAckBuffer); // Play a sound indicating command received/processing started
 
             // Simple direct commands
             if (query.includes('jarvis')) {
@@ -713,21 +751,33 @@
         setInterval(updateSimulatedData, 1000);
 
         // --- Boot Sequence Simulation ---
-        function startBootSequence() {
+        async function startBootSequence() {
             logToConsole("Initiating web boot sequence...");
             updateGUI("Jarvis Web Initializing...", "processing");
 
-            // --- New: Play boot sound ---
+            // Load all sounds upfront
+            listeningBeepBuffer = await loadSound('listening_beep.mp3');
+            commandAckBuffer = await loadSound('command_ack.mp3');
+            errorAlertBuffer = await loadSound('error_alert.mp3');
+
+            // Play boot sound (using Audio object as it's a longer, background sound)
             const bootSound = new Audio('boot_sound.mp3'); // Path to your sound file
             bootSound.volume = 0.5; // Adjust volume if needed
 
             // Attempt to play the sound. This might fail due to browser autoplay policies.
+            // Using a Promise to ensure we only proceed after the sound has *attempted* to play.
+            let bootSoundPlayed = false;
             bootSound.play().then(() => {
                 logToConsole("Boot sound played.");
+                bootSoundPlayed = true;
             }).catch(error => {
                 logToConsole(`Could not play boot sound automatically: ${error.message}. User interaction might be required.`);
+                bootSoundPlayed = true; // Still set true to proceed with boot sequence
             });
-            // --- End New ---
+
+            // Wait a moment for boot sound to start (or fail)
+            await new Promise(resolve => setTimeout(resolve, 500));
+
 
             // Initially hide all elements for the boot animation
             document.querySelectorAll('.hud-container > *').forEach(el => el.style.opacity = '0');
@@ -766,17 +816,11 @@
                                 greeting = "Good evening, sir.";
                             }
 
-                            // --- New: Jarvis speaks greeting after boot sound (or if sound failed) ---
                             speak(greeting + " Jarvis system online and ready.");
-                            // The speak function's onend will handle initiating listenForWakeWord
-                            // --- End New ---
-
                             logToConsole("Jarvis System Ready. AI voice enabled.");
                             logToConsole("Hint: Say 'Jarvis' to activate, then ask a question like 'What is the capital of France?' or 'Open YouTube'.");
 
                             // If speak() doesn't trigger listenForWakeWord due to an error, ensure it starts.
-                            // This next part will be handled by speak()'s onend event.
-                            // However, if speak fails or there's no voice, we need a fallback.
                             if (!SpeechSynthesis.speaking && SpeechSynthesis.getVoices().length > 0) {
                                 setTimeout(listenForWakeWord, 2000); // Fallback if speak doesn't initiate it
                             } else if (SpeechSynthesis.getVoices().length === 0) {
