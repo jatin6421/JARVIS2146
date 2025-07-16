@@ -337,10 +337,58 @@
             box-shadow: 0 0 8px #FF0000;
         }
 
+        /* Overlay for initial button */
+        .initial-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.95);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .initial-overlay button {
+            background-color: #00AAFF;
+            color: #FFFFFF;
+            border: 2px solid #00FFFF;
+            padding: 15px 30px;
+            font-family: 'Consolas', monospace;
+            font-size: 24px;
+            cursor: pointer;
+            border-radius: 5px;
+            box-shadow: 0 0 15px #00FFFF;
+            transition: all 0.3s ease;
+        }
+
+        .initial-overlay button:hover {
+            background-color: #00FFFF;
+            color: #050505;
+            box-shadow: 0 0 25px #00FFFF;
+            transform: translateY(-2px);
+        }
+
+        .initial-overlay p {
+            color: #00FF00;
+            font-size: 16px;
+            font-family: 'Consolas', monospace;
+            margin-top: 10px;
+        }
+
     </style>
 </head>
 <body>
-    <div class="hud-container">
+    <div class="initial-overlay" id="initialOverlay">
+        <button id="startButton">Start Jarvis System</button>
+        <p>Click to initialize voice and audio.</p>
+    </div>
+
+    <div class="hud-container" style="opacity: 0;">
         <div class="hud-border-inner"></div>
 
         <div class="corner-accent top-left"></div>
@@ -404,6 +452,10 @@
         const maleVoiceBtn = document.getElementById('maleVoiceBtn');
         const femaleVoiceBtn = document.getElementById('femaleVoiceBtn');
         const muteBtn = document.getElementById('muteBtn');
+        const initialOverlay = document.getElementById('initialOverlay');
+        const startButton = document.getElementById('startButton');
+        const hudContainer = document.querySelector('.hud-container');
+
 
         // Elements for the system health widget
         const cpuValue = document.getElementById('cpuValue');
@@ -422,7 +474,7 @@
         let isMuted = false;
 
         // --- Audio elements for sound effects ---
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)(); // For better audio control
+        let audioContext; // Will be initialized on user gesture
         let listeningBeepBuffer;
         let commandAckBuffer;
         let errorAlertBuffer;
@@ -430,9 +482,12 @@
         // Function to load audio files
         async function loadSound(url) {
             try {
+                if (!audioContext) {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
                 const response = await fetch(url);
                 const arrayBuffer = await response.arrayBuffer();
-                const audioBuffer = await audioContext.decodeAudioData(arrayBuffer); // Corrected: decodeAudioData
+                const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
                 logToConsole(`Sound loaded: ${url}`);
                 return audioBuffer;
             } catch (error) {
@@ -444,7 +499,7 @@
 
         // Function to play a loaded sound buffer
         function playSound(buffer, volume = 0.7) {
-            if (buffer && !isMuted) {
+            if (buffer && !isMuted && audioContext) {
                 const source = audioContext.createBufferSource();
                 source.buffer = buffer;
                 const gainNode = audioContext.createGain();
@@ -541,6 +596,10 @@
             recognition.onend = () => {
                 if (currentState !== "speaking" && currentState !== "processing" && currentState !== "error") {
                     updateGUI("Ready for command.", "idle");
+                    // Ensure recognition stops completely before restarting for wake word
+                    if (recognition && recognition.listening) {
+                        recognition.stop();
+                    }
                     setTimeout(listenForWakeWord, 500);
                 }
             };
@@ -550,6 +609,7 @@
             logToConsole("Web Speech API not found. Voice features will not work.");
         }
 
+        // This function will now be called after a user gesture
         function populateVoiceList() {
             const voices = SpeechSynthesis.getVoices();
             voiceSelect.innerHTML = '';
@@ -608,6 +668,7 @@
                         option.value = voice.name;
                         optgroup.appendChild(option);
 
+                        // Prioritize English voices, then common male/female names
                         if (!selectedDefaultVoice && voice.lang.startsWith('en')) {
                             if (voice.name.includes('Google US English') && voice.name.includes('Male')) {
                                 selectedDefaultVoice = voice;
@@ -633,8 +694,9 @@
                 voiceSelect.value = selectedDefaultVoice.name;
                 currentVoice = selectedDefaultVoice;
             } else if (voices.length > 0) {
-                voiceSelect.selectedIndex = 0;
-                currentVoice = voices[0];
+                // If no specific default found, just pick the first available English voice
+                currentVoice = voices.find(v => v.lang.startsWith('en')) || voices[0];
+                voiceSelect.value = currentVoice.name;
             }
 
             if (currentVoice) {
@@ -643,7 +705,7 @@
                 logToConsole("No suitable AI voice found. Please check browser settings.");
             }
 
-
+            // Event listeners for voice controls
             voiceSelect.addEventListener('change', () => {
                 const selectedVoiceName = voiceSelect.value;
                 currentVoice = voices.find(voice => voice.name === selectedVoiceName);
@@ -653,58 +715,57 @@
                 }
             });
 
-            if (maleVoiceBtn) {
-                maleVoiceBtn.addEventListener('click', () => {
-                    const maleVoice = maleVoices.length > 0 ? maleVoices[0] : null;
-                    if (maleVoice) {
-                        currentVoice = maleVoice;
-                        voiceSelect.value = maleVoice.name;
-                        logToConsole(`AI Voice changed to: ${currentVoice.name} via Male button.`);
-                        speak("Male voice selected.");
-                    } else {
-                        logToConsole("No male voice found to select.");
-                        speak("Sorry, I could not find a male voice.");
-                    }
-                });
-            }
+            maleVoiceBtn.addEventListener('click', () => {
+                const maleVoice = maleVoices.length > 0 ? maleVoices[0] : null;
+                if (maleVoice) {
+                    currentVoice = maleVoice;
+                    voiceSelect.value = maleVoice.name;
+                    logToConsole(`AI Voice changed to: ${currentVoice.name} via Male button.`);
+                    speak("Male voice selected.");
+                } else {
+                    logToConsole("No male voice found to select.");
+                    speak("Sorry, I could not find a male voice.");
+                }
+            });
 
-            if (femaleVoiceBtn) {
-                femaleVoiceBtn.addEventListener('click', () => {
-                    const femaleVoice = femaleVoices.length > 0 ? femaleVoices[0] : null;
-                    if (femaleVoice) {
-                        currentVoice = femaleVoice;
-                        voiceSelect.value = femaleVoice.name;
-                        logToConsole(`AI Voice changed to: ${currentVoice.name} via Female button.`);
-                        speak("Female voice selected.");
-                    } else {
-                        logToConsole("No female voice found to select.");
-                        speak("Sorry, I could not find a female voice.");
-                    }
-                });
-            }
+            femaleVoiceBtn.addEventListener('click', () => {
+                const femaleVoice = femaleVoices.length > 0 ? femaleVoices[0] : null;
+                if (femaleVoice) {
+                    currentVoice = femaleVoice;
+                    voiceSelect.value = femaleVoice.name;
+                    logToConsole(`AI Voice changed to: ${currentVoice.name} via Female button.`);
+                    speak("Female voice selected.");
+                } else {
+                    logToConsole("No female voice found to select.");
+                    speak("Sorry, I could not find a female voice.");
+                }
+            });
 
-            if (muteBtn) {
-                muteBtn.addEventListener('click', () => {
-                    isMuted = !isMuted;
-                    if (isMuted) {
-                        SpeechSynthesis.cancel();
-                        muteBtn.textContent = 'Unmute Jarvis';
-                        muteBtn.classList.add('muted');
-                        logToConsole("Jarvis is now muted.");
-                    } else {
-                        muteBtn.textContent = 'Mute Jarvis';
-                        muteBtn.classList.remove('muted');
-                        logToConsole("Jarvis is now unmuted.");
-                        speak("I am unmuted.");
-                    }
-                });
-            }
+            muteBtn.addEventListener('click', () => {
+                isMuted = !isMuted;
+                if (isMuted) {
+                    SpeechSynthesis.cancel();
+                    muteBtn.textContent = 'Unmute Jarvis';
+                    muteBtn.classList.add('muted');
+                    logToConsole("Jarvis is now muted.");
+                } else {
+                    muteBtn.textContent = 'Mute Jarvis';
+                    muteBtn.classList.remove('muted');
+                    logToConsole("Jarvis is now unmuted.");
+                    speak("I am unmuted.");
+                }
+            });
         }
 
+
+        // Moved voice population to be called when voices are ready AND after user gesture
+        // The onvoiceschanged event will still fire, but we ensure populateVoiceList is effective after user gesture
+        // We ensure this is only assigned once, not on every click of the start button
         if (SpeechSynthesis.onvoiceschanged !== undefined) {
-            SpeechSynthesis.onvoiceschanged = populateVoiceList;
+             SpeechSynthesis.onvoiceschanged = populateVoiceList;
         } else {
-            setTimeout(populateVoiceList, 500);
+            // Fallback for browsers that don't reliably fire onvoiceschanged
+            // We'll call populateVoiceList after the user clicks start
         }
 
 
@@ -746,8 +807,9 @@
 
         function listenForWakeWord() {
             if (recognition && SpeechSynthesis) {
+                // Do not try to listen if Jarvis is currently speaking
                 if (SpeechSynthesis.speaking) {
-                    setTimeout(listenForWakeWord, 500);
+                    setTimeout(listenForWakeWord, 500); // Re-check after a short delay
                     return;
                 }
 
@@ -758,10 +820,15 @@
                 }
 
                 try {
-                    recognition.start();
-                    setTimeout(() => {
+                    // Only start recognition if it's not already listening
+                    if (!recognition.listening) {
+                        recognition.start();
+                    }
+
+                    // Add a timeout for wake word listening
+                    const wakeWordTimeout = setTimeout(() => {
                         if (recognition && recognition.listening && currentState === "sleeping") {
-                            recognition.stop();
+                            recognition.stop(); // Stop listening if no wake word heard within timeout
                             if (!isMuted) {
                                 speak("No wake word detected. Back to sleep.");
                             } else {
@@ -769,11 +836,20 @@
                             }
                             logToConsole("Timeout: No wake word heard.");
                         }
-                    }, 7000);
+                    }, 7000); // Listen for 7 seconds for the wake word
+
+                    // Clear the timeout if recognition starts successfully
+                    recognition.onstart = () => {
+                        clearTimeout(wakeWordTimeout);
+                        updateGUI("Listening for command...", "listening");
+                        playSound(listeningBeepBuffer);
+                    };
+
                 } catch (e) {
                     logToConsole("Error starting speech recognition for wake word: " + e.message);
                     if (e.message.includes("already started")) {
-                        // Ignore or handle gracefully
+                        // This can happen if recognition.start() is called multiple times quickly.
+                        // It's generally safe to ignore this specific error or add a check before calling start.
                     } else {
                         updateGUI("Error with mic, check permissions.", "error");
                     }
@@ -788,14 +864,28 @@
             updateGUI(`Processing: "${query}"`, "processing");
             playSound(commandAckBuffer);
 
+            // Directly handle wake word if it's part of a longer command
             if (query.includes('jarvis')) {
-                speak("Yes, how can I help you?");
-                return;
+                // If it's just 'jarvis' or 'hey jarvis', respond with 'how can I help?'
+                if (query.trim() === 'jarvis' || query.trim() === 'hey jarvis') {
+                     speak("Yes, how can I help you?");
+                } else {
+                    // If 'jarvis' is part of a longer command, process the rest
+                    const actualCommand = query.replace(/jarvis/g, '').trim();
+                    if (actualCommand) {
+                        processGeminiCommand(actualCommand);
+                    } else {
+                        speak("Please state your command after saying Jarvis.");
+                    }
+                }
+                return; // Stop here if it's a wake word or starts with it
             }
 
+
+            // Handle specific commands
             if (query.includes('open youtube')) {
                 speak("Opening YouTube.");
-                window.open("https://www.youtube.com", '_blank'); // Corrected URL
+                window.open("https://www.youtube.com", '_blank');
             } else if (query.includes('open google')) {
                 speak("Opening Google.");
                 window.open("https://www.google.com", '_blank');
@@ -810,37 +900,45 @@
             } else if (query.includes('play music')) {
                 speak("In a web environment, I cannot directly play local music files from your computer. Would you like me to open an online music streaming service like YouTube Music or Spotify web player?");
             }
-            else if (query.includes('exit') || query.includes('quit') || query.includes('stop listening')) {
+            else if (query.includes('exit') || query.includes('quit') || query.includes('stop listening') || query.includes('go to sleep')) {
                 speak("Goodbye! Have a great day.");
                 updateGUI("Jarvis Pro stopped.", "idle");
                 if (recognition && recognition.listening) {
                     recognition.stop();
                 }
+                // Transition to sleeping state immediately without restarting recognition
+                setTimeout(() => updateGUI("Jarvis Pro is sleeping.", "sleeping"), 1000);
                 return;
             }
             else {
-                speak("Let me think...");
-                updateGUI("Querying AI...", "processing");
-                try {
-                    const response = await fetch(`${BACKEND_BASE_URL}/api/gemini`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ prompt: query })
-                    });
-                    const data = await response.json();
-                    if (response.ok) {
-                        speak(data.response);
-                    } else {
-                        speak(data.error || "Sorry, I encountered an error when talking to the AI.");
-                        logToConsole(`Backend error: ${data.error || 'Unknown'}`);
-                    }
-                } catch (e) {
-                    speak("Couldn't reach the AI backend. Is the server running?");
-                    console.error("Backend Gemini fetch error:", e);
-                    logToConsole("Failed to connect to backend AI server.");
-                }
+                // If not a predefined command, send to Gemini
+                processGeminiCommand(query);
             }
         }
+
+        async function processGeminiCommand(query) {
+            speak("Let me think...");
+            updateGUI("Querying AI...", "processing");
+            try {
+                const response = await fetch(`${BACKEND_BASE_URL}/api/gemini`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: query })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    speak(data.response);
+                } else {
+                    speak(data.error || "Sorry, I encountered an error when talking to the AI.");
+                    logToConsole(`Backend error: ${data.error || 'Unknown'}`);
+                }
+            } catch (e) {
+                speak("Couldn't reach the AI backend. Is the server running?");
+                console.error("Backend Gemini fetch error:", e);
+                logToConsole("Failed to connect to backend AI server.");
+            }
+        }
+
 
         function updateSimulatedData() {
             const cpu = Math.floor(Math.random() * 60) + 20;
@@ -888,6 +986,7 @@
             logToConsole("Initiating web boot sequence...");
             updateGUI("Jarvis Web Initializing...", "processing");
 
+            // Load sounds - now this is triggered by user gesture
             listeningBeepBuffer = await loadSound('listening_beep.mp3');
             commandAckBuffer = await loadSound('command_ack.mp3');
             errorAlertBuffer = await loadSound('error_alert.mp3');
@@ -895,29 +994,28 @@
             const bootSound = new Audio('boot_sound.mp3');
             bootSound.volume = 0.5;
 
-            let bootSoundPlayed = false;
+            // Play boot sound (it will only play if audioContext is active due to user gesture)
             if (!isMuted) {
                 bootSound.play().then(() => {
                     logToConsole("Boot sound played.");
-                    bootSoundPlayed = true;
                 }).catch(error => {
-                    logToConsole(`Could not play boot sound automatically: ${error.message}. User interaction might be required.`);
-                    bootSoundPlayed = true;
+                    logToConsole(`Could not play boot sound automatically: ${error.message}. User interaction might be required, or mute is on.`);
                 });
             } else {
                  logToConsole("Boot sound skipped because Jarvis is muted.");
-                 bootSoundPlayed = true;
             }
 
             await new Promise(resolve => setTimeout(resolve, 500));
 
 
+            // Fade in HUD elements
+            hudContainer.style.opacity = '0'; // Ensure it starts faded for the animation
             document.querySelectorAll('.hud-container > *').forEach(el => el.style.opacity = '0');
-            document.querySelector('.hud-container').style.opacity = '0';
+
 
             let delay = 0;
             const bootElements = [
-                document.querySelector('.hud-container'),
+                hudContainer, // Animate container first
                 document.querySelector('.hud-border-inner'),
                 ...document.querySelectorAll('.corner-accent'),
                 document.querySelector('.jarvis-title'),
@@ -933,9 +1031,9 @@
                     el.style.transition = 'opacity 0.5s ease-in';
                     el.style.opacity = '1';
                     if (el.classList.contains('hud-container')) {
-                        el.style.transition = 'opacity 1s ease-in';
+                        el.style.transition = 'opacity 1s ease-in'; // Slower fade for the main container
                     }
-                    if (index === bootElements.length - 1) {
+                    if (index === bootElements.length - 1) { // After the last element fades in
                         setTimeout(() => {
                             const currentHour = new Date().getHours();
                             let greeting;
@@ -951,24 +1049,44 @@
                             logToConsole("Jarvis System Ready. AI voice enabled.");
                             logToConsole("Hint: Say 'Jarvis' to activate, then ask a question like 'What is the capital of France?' or 'Open YouTube'.");
 
-                            if (!SpeechSynthesis.speaking && SpeechSynthesis.getVoices().length > 0) {
-                                setTimeout(listenForWakeWord, 2000);
-                            } else if (SpeechSynthesis.getVoices().length === 0) {
-                                logToConsole("No speech voices available, cannot speak greeting. Voice commands will be disabled.");
-                            }
+                            // Start listening for wake word after greeting, if speaking is done and voices exist
+                            const checkAndListen = () => {
+                                if (!SpeechSynthesis.speaking && SpeechSynthesis.getVoices().length > 0) {
+                                    listenForWakeWord();
+                                } else if (SpeechSynthesis.getVoices().length === 0) {
+                                    logToConsole("No speech voices available, cannot speak greeting. Voice commands will be disabled.");
+                                } else {
+                                    setTimeout(checkAndListen, 500); // Still speaking, check again
+                                }
+                            };
+                            checkAndListen();
 
-                        }, 1000);
+
+                        }, 1000); // Delay after last element fades in before greeting
                     }
                 }, delay);
                 delay += 100;
             });
         }
 
+        // Initial setup on DOMContentLoaded
         document.addEventListener('DOMContentLoaded', () => {
-            updateSimulatedData();
-            populateVoiceList();
-            startBootSequence();
+            updateSimulatedData(); // Start updating health data immediately
+            // Do NOT call populateVoiceList or startBootSequence here directly.
+            // They will be called after the user clicks the "Start Jarvis System" button.
         });
+
+        // Event listener for the "Start Jarvis System" button
+        startButton.addEventListener('click', () => {
+            initialOverlay.style.display = 'none'; // Hide the overlay
+            // Initialize AudioContext on user gesture
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            populateVoiceList(); // Populate voices after user gesture
+            startBootSequence(); // Start the main boot sequence
+        });
+
     </script>
 </body>
 </html>
