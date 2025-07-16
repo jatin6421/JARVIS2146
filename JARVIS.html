@@ -87,13 +87,68 @@
             z-index: 5;
         }
 
-        .data-readouts {
+        /* Replaced .data-readouts with .system-health-widget */
+        .system-health-widget {
             position: absolute;
-            top: 100px;
-            left: 80px;
-            font-size: 14px;
-            line-height: 1.5;
+            top: 100px; /* Adjust as needed, maybe to the left or right of status display */
+            left: 80px; /* Adjust to move it from data-readouts */
+            width: 250px; /* Fixed width for the widget */
+            background-color: rgba(0, 50, 50, 0.1); /* Slightly more visible background */
+            border: 1px solid #005566;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            box-shadow: 0 0 8px rgba(0, 255, 255, 0.2);
+            z-index: 5;
+        }
+
+        .health-item {
+            display: flex;
+            flex-wrap: wrap; /* Allows label/value/bar to wrap if needed */
+            align-items: center;
+            font-size: 13px;
             color: #00FF00;
+        }
+
+        .health-label {
+            width: 80px; /* Fixed width for labels */
+            color: #00DDFF;
+            font-weight: bold;
+        }
+
+        .health-value {
+            flex-grow: 1;
+            text-align: right;
+            margin-left: 10px; /* Space from label */
+            color: #00FF00;
+        }
+
+        .health-bar-container {
+            width: 100%; /* Bar takes full width below label/value */
+            height: 4px;
+            background-color: #1a1a1a;
+            border-radius: 2px;
+            overflow: hidden; /* Ensures bar doesn't exceed container */
+            margin-top: 4px; /* Space between value and bar */
+        }
+
+        .health-bar {
+            height: 100%;
+            background: linear-gradient(to right, #00FF00, #00DDFF); /* Green to cyan gradient */
+            width: 0%; /* Initial width */
+            transition: width 0.5s ease-out; /* Smooth transition for bar updates */
+        }
+
+        /* Specific colors for different levels (optional, but cool) */
+        .health-bar.yellow { background: linear-gradient(to right, #FFFF00, #FFAA00); }
+        .health-bar.red { background: linear-gradient(to right, #FF0000, #FF5500); }
+
+        #systemStatus {
+            color: #00FFFF; /* Distinct color for overall status */
+            font-weight: bold;
+            flex-grow: 1;
+            text-align: right;
         }
 
         .console-output {
@@ -271,6 +326,58 @@
             box-shadow: 0 0 8px #00FFFF;
         }
 
+        /* NEW: Styles for Manual Input */
+        .input-controls {
+            position: absolute;
+            bottom: 180px; /* Adjust this to be above the console output */
+            left: 30px;
+            width: calc(100% - 60px);
+            display: flex;
+            gap: 10px; /* Space between input and button */
+            align-items: center;
+            z-index: 5; /* Ensure it's above other elements if needed */
+        }
+
+        .input-controls input[type="text"] {
+            flex-grow: 1; /* Allows input to take up most space */
+            background-color: #0d0d0d;
+            color: #00FF00;
+            border: 1px solid #00AAFF;
+            padding: 10px;
+            font-family: 'Consolas', monospace;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        .input-controls input[type="text"]:focus {
+            outline: none;
+            border-color: #00FFFF;
+            box-shadow: 0 0 5px #00FFFF;
+        }
+
+        .input-controls button {
+            background-color: #0d0d0d;
+            color: #00FFFF;
+            border: 1px solid #00AAFF;
+            padding: 10px 15px;
+            font-family: 'Consolas', monospace;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.3s, color 0.3s, border-color 0.3s, box-shadow 0.3s;
+        }
+
+        .input-controls button:hover {
+            background-color: #00AAFF;
+            color: #050505;
+            border-color: #00FFFF;
+            box-shadow: 0 0 5px #00FFFF;
+        }
+
+        .input-controls button:active {
+            background-color: #00FFFF;
+            color: #050505;
+            box-shadow: 0 0 8px #00FFFF;
+        }
     </style>
 </head>
 <body>
@@ -286,11 +393,30 @@
 
         <div class="status-display" id="statusDisplay">Jarvis Web Initializing...</div>
 
-        <div class="data-readouts">
-            <div id="cpuReadout">CPU: 0%</div>
-            <div id="ramReadout">RAM: 0%</div>
-            <div id="netReadout">NET: 0Kb/s</div>
-            <div id="dateTimeReadout"></div>
+        <div class="system-health-widget">
+            <div class="health-item">
+                <span class="health-label">CPU Load:</span>
+                <span class="health-value" id="cpuValue">0%</span>
+                <div class="health-bar-container"><div class="health-bar" id="cpuBar"></div></div>
+            </div>
+            <div class="health-item">
+                <span class="health-label">RAM Usage:</span>
+                <span class="health-value" id="ramValue">0%</span>
+                <div class="health-bar-container"><div class="health-bar" id="ramBar"></div></div>
+            </div>
+            <div class="health-item">
+                <span class="health-label">Network:</span>
+                <span class="health-value" id="netValue">0Kb/s</span>
+                <div class="health-bar-container"><div class="health-bar" id="netBar"></div></div>
+            </div>
+            <div class="health-item">
+                <span class="health-label">Time:</span>
+                <span class="health-value" id="dateTimeReadout"></span>
+            </div>
+            <div class="health-item">
+                <span class="health-label">Status:</span>
+                <span class="health-value" id="systemStatus">Initializing</span>
+            </div>
         </div>
 
         <div class="voice-controls">
@@ -307,20 +433,36 @@
             <div id="stateAnimation" class="sleeping-animation"></div>
         </div>
 
+        <div class="input-controls">
+            <input type="text" id="textInput" placeholder="Type your command here..." autocomplete="off">
+            <button id="sendTextBtn">Send Command</button>
+        </div>
+
         <textarea id="consoleOutput" class="console-output" readonly></textarea>
     </div>
 
     <script>
         const statusDisplay = document.getElementById('statusDisplay');
         const consoleOutput = document.getElementById('consoleOutput');
-        const cpuReadout = document.getElementById('cpuReadout');
-        const ramReadout = document.getElementById('ramReadout');
-        const netReadout = document.getElementById('netReadout');
-        const dateTimeReadout = document.getElementById('dateTimeReadout');
+        // REMOVED old cpuReadout, ramReadout, netReadout, as they are replaced by widget
+        const dateTimeReadout = document.getElementById('dateTimeReadout'); // Kept for time display
         const stateAnimation = document.getElementById('stateAnimation');
         const voiceSelect = document.getElementById('voiceSelect');
-        const maleVoiceBtn = document.getElementById('maleVoiceBtn'); // New button element
-        const femaleVoiceBtn = document.getElementById('femaleVoiceBtn'); // New button element
+        const maleVoiceBtn = document.getElementById('maleVoiceBtn');
+        const femaleVoiceBtn = document.getElementById('femaleVoiceBtn');
+
+        // NEW: Elements for the system health widget
+        const cpuValue = document.getElementById('cpuValue');
+        const cpuBar = document.getElementById('cpuBar');
+        const ramValue = document.getElementById('ramValue');
+        const ramBar = document.getElementById('ramBar');
+        const netValue = document.getElementById('netValue');
+        const netBar = document.getElementById('netBar');
+        const systemStatus = document.getElementById('systemStatus');
+
+        // NEW: Elements for manual input
+        const textInput = document.getElementById('textInput');
+        const sendTextBtn = document.getElementById('sendTextBtn');
 
         // --- Configuration for Backend Endpoints ---
         const BACKEND_BASE_URL = "http://127.0.0.1:5000"; // Flask default port
@@ -689,7 +831,7 @@
 
             if (query.includes('open youtube')) {
                 speak("Opening YouTube.");
-                window.open("https://www.youtube.com", '_blank'); // Corrected URL
+                window.open("http://youtube.com", '_blank'); // Corrected URL (removed googleusercontent part)
             } else if (query.includes('open google')) {
                 speak("Opening Google.");
                 window.open("https://www.google.com", '_blank');
@@ -737,11 +879,43 @@
             }
         }
 
-        // --- Simulated Data Readouts & Date/Time Update ---
+        // --- Simulated Data Readouts & Date/Time Update (UPDATED FOR WIDGET) ---
         function updateSimulatedData() {
-            cpuReadout.textContent = `CPU: ${Math.floor(Math.random() * 60) + 20}%`;
-            ramReadout.textContent = `RAM: ${Math.floor(Math.random() * 60) + 30}%`;
-            netReadout.textContent = `NET: ${Math.floor(Math.random() * 490) + 10}Kb/s`;
+            const cpu = Math.floor(Math.random() * 60) + 20; // 20-80%
+            const ram = Math.floor(Math.random() * 60) + 30; // 30-90%
+            const net = Math.floor(Math.random() * 490) + 10; // 10-500 Kb/s
+
+            cpuValue.textContent = `${cpu}%`;
+            cpuBar.style.width = `${cpu}%`;
+            cpuBar.classList.toggle('yellow', cpu > 60);
+            cpuBar.classList.toggle('red', cpu > 85);
+
+            ramValue.textContent = `${ram}%`;
+            ramBar.style.width = `${ram}%`;
+            ramBar.classList.toggle('yellow', ram > 70);
+            ramBar.classList.toggle('red', ram > 90);
+
+            netValue.textContent = `${net}Kb/s`;
+            // For network, the bar can represent activity or a hypothetical 'bandwidth usage'
+            // Let's make it represent activity (higher usage = wider bar)
+            netBar.style.width = `${(net / 500) * 100}%`; // Normalize to 100% based on max 500Kb/s
+            netBar.classList.toggle('yellow', net > 300);
+            netBar.classList.toggle('red', net > 450);
+
+            let statusText = "Optimal";
+            if (cpu > 80 || ram > 85 || net > 400) {
+                statusText = "High Load";
+                systemStatus.style.color = '#FFAA00'; // Orange for high load
+            }
+            if (cpu > 90 || ram > 95 || net > 480) {
+                 statusText = "Critical!";
+                 systemStatus.style.color = '#FF0000'; // Red for critical
+            } else if (cpu <= 80 && ram <= 85 && net <= 400) {
+                 systemStatus.style.color = '#00FFFF'; // Reset to default if conditions improve
+            }
+            systemStatus.textContent = statusText;
+
+
             dateTimeReadout.textContent = new Date().toLocaleString('en-US', {
                 year: 'numeric', month: '2-digit', day: '2-digit',
                 hour: '2-digit', minute: '2-digit', second: '2-digit',
@@ -756,7 +930,7 @@
             updateGUI("Jarvis Web Initializing...", "processing");
 
             // Load all sounds upfront
-            listeningBeepBuffer = await loadSound('listening_beep.mp3');
+            listeningBeepBuffer = await loadSound('listening_beep.mp3'); // Make sure these paths are correct!
             commandAckBuffer = await loadSound('command_ack.mp3');
             errorAlertBuffer = await loadSound('error_alert.mp3');
 
@@ -790,9 +964,10 @@
                 ...document.querySelectorAll('.corner-accent'),
                 document.querySelector('.jarvis-title'),
                 document.getElementById('statusDisplay'),
-                document.querySelector('.data-readouts'),
+                document.querySelector('.system-health-widget'), // Changed from data-readouts
                 document.querySelector('.voice-controls'),
                 document.querySelector('.central-animation-container'),
+                document.querySelector('.input-controls'), // NEW: Include manual input
                 document.getElementById('consoleOutput')
             ];
 
@@ -819,6 +994,8 @@
                             speak(greeting + " Jarvis system online and ready.");
                             logToConsole("Jarvis System Ready. AI voice enabled.");
                             logToConsole("Hint: Say 'Jarvis' to activate, then ask a question like 'What is the capital of France?' or 'Open YouTube'.");
+                            logToConsole("You can also type commands into the new input field below!");
+
 
                             // If speak() doesn't trigger listenForWakeWord due to an error, ensure it starts.
                             if (!SpeechSynthesis.speaking && SpeechSynthesis.getVoices().length > 0) {
@@ -838,6 +1015,23 @@
         document.addEventListener('DOMContentLoaded', () => {
             updateSimulatedData(); // Start data updates immediately
             populateVoiceList();   // Populate voice options
+
+            // NEW: Add event listeners for manual input
+            sendTextBtn.addEventListener('click', () => {
+                const command = textInput.value.trim();
+                if (command) {
+                    logToConsole(`Manual input: "${command}"`);
+                    handleCommand(command);
+                    textInput.value = ''; // Clear input field
+                }
+            });
+
+            textInput.addEventListener('keypress', (event) => {
+                if (event.key === 'Enter') {
+                    sendTextBtn.click(); // Trigger button click on Enter key
+                }
+            });
+
             startBootSequence();   // Initiate the visual boot sequence and then voice listening
         });
 
