@@ -14,7 +14,7 @@
             align-items: center;
             min-height: 100vh;
             margin: 0;
-            overflow: hidden;
+            overflow: hidden; /* Prevent scrollbars unless necessary for content */
         }
 
         .hud-container {
@@ -265,6 +265,110 @@
             transform: translateY(-2px);
         }
         .initial-overlay p { color: #00FF00; font-size: 16px; margin-top: 10px; }
+
+        /* --- Mobile Responsiveness --- */
+        @media (max-width: 768px) {
+            body {
+                align-items: flex-start; /* Align to top for better content display */
+                padding-top: 20px;
+                overflow-y: auto; /* Allow scrolling on smaller screens */
+            }
+
+            .hud-container {
+                width: 95vw; /* Take up more width */
+                height: auto; /* Height adjusts to content */
+                max-height: unset; /* Remove max-height constraint */
+                min-height: 90vh; /* Ensure it's still tall enough */
+                padding: 15px;
+                flex-direction: column;
+                justify-content: flex-start; /* Stack content from top */
+                gap: 20px; /* Add space between main sections */
+            }
+
+            .hud-border-inner, .corner-accent {
+                display: none; /* Simplify border elements on mobile */
+            }
+
+            .jarvis-title {
+                position: static; /* Remove absolute positioning */
+                transform: none; /* Remove transform */
+                margin-bottom: 15px;
+                font-size: 20px;
+                text-align: center;
+                width: auto; /* Adjust width naturally */
+            }
+
+            .jarvis-title::after {
+                width: 100px; /* Smaller underline */
+            }
+
+            .status-display {
+                position: static; /* Remove absolute positioning */
+                transform: none; /* Remove transform */
+                margin-bottom: 20px;
+                font-size: 16px;
+                width: auto;
+            }
+
+            .system-health-widget {
+                position: static; /* Remove absolute positioning */
+                width: 100%; /* Take full width */
+                max-width: 320px; /* Constrain width for better readability */
+                margin: 0 auto 20px auto; /* Center and add margin */
+                padding: 10px;
+                box-sizing: border-box;
+            }
+            .health-label {
+                width: 60px; /* Smaller label width */
+                font-size: 12px;
+            }
+            .health-value {
+                font-size: 12px;
+            }
+
+            .voice-controls {
+                position: static; /* Remove absolute positioning */
+                width: 100%; /* Take full width */
+                max-width: 320px; /* Constrain width */
+                margin: 0 auto 20px auto; /* Center and add margin */
+                align-items: center; /* Center buttons */
+            }
+            .voice-controls select, .voice-controls button {
+                width: 100%; /* Full width within its container */
+                max-width: 280px; /* Limit max width */
+                font-size: 11px;
+                padding: 10px 5px; /* Adjust padding */
+            }
+
+            .central-animation-container {
+                position: static; /* Remove absolute positioning */
+                transform: none; /* Remove transform */
+                margin: 20px auto; /* Center and add vertical spacing */
+                width: 150px; /* Make smaller */
+                height: 150px; /* Make smaller */
+                flex-shrink: 0; /* Prevent it from shrinking too much */
+            }
+            .listening-animation { width: 80px; height: 80px; border-width: 2px; }
+            .speaking-animation { width: 60px; height: 60px; }
+            .processing-animation { width: 70px; height: 70px; border-width: 3px; }
+            .sleeping-animation { width: 15px; height: 15px; }
+
+
+            .chat-log {
+                position: static; /* Remove absolute positioning */
+                width: 100%; /* Take full width */
+                height: 300px; /* Give it a fixed height or min-height */
+                padding: 10px;
+                margin: 0 auto 20px auto; /* Center and add margin */
+                flex-grow: 1; /* Allow it to grow and fill available space */
+                min-height: 200px; /* Ensure a minimum height */
+            }
+            .chat-message {
+                max-width: 95%; /* Allow messages to take more width */
+                font-size: 12px;
+                padding: 6px 10px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -522,7 +626,7 @@
                             speak("Yes? How can I help?");
                         }
                     } else if (currentState !== 'sleeping') {
-                         handleCommand(transcript);
+                           handleCommand(transcript);
                     }
                 };
 
