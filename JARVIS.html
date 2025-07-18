@@ -5,9 +5,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>J.A.R.V.I.S. 2.0 - Gemini Powered</title>
     <style>
+        /* CSS Variables for Gold Theme */
+        :root {
+            --dark-background: #050505; /* Keep dark for contrast */
+            --gold-primary: #FFD700;    /* Gold */
+            --gold-light: #FFEA80;      /* Lighter Gold */
+            --gold-dark: #B8860B;       /* Darker Gold (Goldenrod) */
+            --gold-accent: #DAA520;     /* Goldenrod for accents */
+
+            /* Complementary/Accent Colors */
+            --deep-blue: #1A2B3C;       /* Dark, muted blue for contrast */
+            --light-grey: #E0E0E0;      /* For subtle text/elements */
+            --medium-grey: #666666;     /* For less prominent text */
+
+            --accent-border: var(--gold-dark);
+            --accent-shadow: var(--gold-primary);
+            --text-primary: var(--gold-light);
+            --text-secondary: var(--light-grey);
+            --text-accent: var(--gold-primary);
+
+            --warning-yellow: #FFC107; /* Adjusted yellow for warnings */
+            --error-red: #FF0000;      /* Keep for functional errors */
+        }
+
         body {
-            background-color: #050505;
-            color: #00FF00; /* Neon Green */
+            background-color: var(--dark-background);
+            color: var(--text-primary);
             font-family: 'Consolas', monospace;
             display: flex;
             justify-content: center;
@@ -23,16 +46,69 @@
             height: 90vh;
             max-height: 700px;
             position: relative;
-            border: 2px solid #00AABB;
-            box-shadow: 0 0 15px #00FFFF;
+            border: 2px solid var(--accent-border);
+            box-shadow:
+                0 0 15px var(--accent-shadow),
+                0 0 30px rgba(255, 215, 0, 0.3),
+                0 0 45px rgba(255, 215, 0, 0.1); /* Layered glow with gold */
             display: flex;
             flex-direction: column;
             justify-content: space-between;
             align-items: center;
             padding: 20px;
             box-sizing: border-box;
-            background-color: rgba(0, 0, 0, 0.3);
-            backdrop-filter: blur(5px);
+            background-color: rgba(10, 10, 0, 0.4); /* Darker, slightly golden tint */
+            backdrop-filter: blur(8px); /* Stronger glass effect */
+            overflow: hidden; /* Ensure background grid stays within bounds */
+            border-radius: 15px; /* Rounded corners for the container */
+        }
+
+        /* Subtle background grid animation */
+        .hud-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                linear-gradient(to right, rgba(255, 215, 0, 0.07) 1px, transparent 1px), /* Gold grid */
+                linear-gradient(to bottom, rgba(255, 215, 0, 0.07) 1px, transparent 1px);
+            background-size: 25px 25px; /* Slightly larger grid for desktop */
+            animation: panBackground 60s linear infinite;
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.3; /* More subtle */
+        }
+
+        /* Subtle scanline/noise effect */
+        .hud-container::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                var(--dark-background),
+                var(--dark-background) 1px,
+                rgba(255, 215, 0, 0.05) 1px, /* Gold scanlines */
+                rgba(255, 215, 0, 0.05) 2px
+            );
+            animation: scanlines 1s linear infinite;
+            pointer-events: none;
+            z-index: 1;
+            opacity: 0.1; /* Very subtle */
+        }
+
+        @keyframes panBackground {
+            from { background-position: 0 0; }
+            to { background-position: -1000px -1000px; }
+        }
+
+        @keyframes scanlines {
+            from { background-position: 0 0; }
+            to { background-position: 0 100%; }
         }
 
         .hud-border-inner {
@@ -41,17 +117,19 @@
             left: 30px;
             right: 30px;
             bottom: 30px;
-            border: 1px solid #006677;
+            border: 1px solid var(--gold-dark); /* Darker gold inner border */
             pointer-events: none;
+            border-radius: 10px; /* Inner rounded corners */
         }
 
         .corner-accent {
             position: absolute;
             width: 30px;
             height: 30px;
-            border-color: #00FFFF;
+            border-color: var(--gold-light); /* Gold accents */
             border-style: solid;
             border-width: 0;
+            box-shadow: 0 0 8px var(--gold-light); /* Glow for accents */
         }
         .corner-accent.top-left { top: 20px; left: 20px; border-top-width: 2px; border-left-width: 2px; }
         .corner-accent.top-right { top: 20px; right: 20px; border-top-width: 2px; border-right-width: 2px; }
@@ -59,192 +137,256 @@
         .corner-accent.bottom-right { bottom: 20px; right: 20px; border-bottom-width: 2px; border-right-width: 2px; }
 
         .jarvis-title {
-            color: #00DDFF;
-            font-size: 24px;
+            color: var(--text-accent); /* Gold title */
+            font-size: 28px; /* Slightly larger */
             font-weight: bold;
             position: absolute;
             top: 45px;
             left: 50%;
             transform: translateX(-50%);
             animation: flicker 0.3s infinite alternate;
+            text-shadow:
+                0 0 10px var(--text-accent),
+                0 0 20px var(--text-accent),
+                0 0 30px rgba(255, 215, 0, 0.5); /* Deeper gold glow */
+            letter-spacing: 2px; /* More technical look */
+            filter: brightness(1.2); /* Extra pop */
             z-index: 10;
         }
         .jarvis-title::after {
             content: '';
             display: block;
-            width: 140px;
-            height: 1px;
-            background-color: #007777;
-            margin: 5px auto 0;
+            width: 160px; /* Slightly wider */
+            height: 2px; /* Thicker line */
+            background-color: var(--gold-dark);
+            margin: 8px auto 0;
+            box-shadow: 0 0 8px var(--gold-dark); /* Stronger glow for underline */
         }
 
         .status-display {
-            font-size: 18px;
+            font-size: 20px; /* Slightly larger */
             font-weight: bold;
-            color: #00FFFF;
+            color: var(--text-primary); /* Gold status text */
             text-align: center;
             position: absolute;
-            top: 80px;
+            top: 90px; /* Adjusted position */
             left: 50%;
             transform: translateX(-50%);
             width: 90%;
+            text-shadow: 0 0 8px var(--text-primary); /* Stronger gold glow */
             z-index: 5;
         }
 
         .system-health-widget {
             position: absolute;
-            top: 120px;
+            top: 140px; /* Adjusted position */
             left: 40px;
-            width: 280px;
-            background-color: rgba(0, 50, 50, 0.1);
-            border: 1px solid #005566;
-            padding: 15px;
+            width: 300px; /* Slightly wider */
+            background-color: rgba(0, 0, 0, 0.25); /* More neutral transparent background */
+            border: 1px solid var(--gold-dark); /* Gold border */
+            padding: 18px; /* More padding */
             display: flex;
             flex-direction: column;
-            gap: 10px;
-            box-shadow: 0 0 8px rgba(0, 255, 255, 0.2);
+            gap: 12px; /* More space between items */
+            box-shadow:
+                0 0 12px rgba(255, 215, 0, 0.4), /* Gold glow */
+                inset 0 0 5px rgba(255, 215, 0, 0.1); /* Outer and inner glow */
             z-index: 5;
+            border-radius: 12px; /* More rounded corners */
         }
 
         .health-item {
             display: flex;
             flex-wrap: wrap;
             align-items: center;
-            font-size: 13px;
-            color: #00FF00;
+            font-size: 14px; /* Slightly larger font */
+            color: var(--text-secondary); /* Light grey text */
         }
 
         .health-label {
-            width: 80px;
-            color: #00DDFF;
+            width: 90px; /* Wider label */
+            color: var(--gold-light); /* Light gold label */
             font-weight: bold;
+            text-shadow: 0 0 4px rgba(255, 215, 0, 0.6);
         }
 
         .health-value {
             flex-grow: 1;
             text-align: right;
-            margin-left: 10px;
-            color: #00FF00;
+            margin-left: 15px; /* More margin */
+            color: var(--gold-primary); /* Gold value */
+            text-shadow: 0 0 4px rgba(255, 215, 0, 0.6);
         }
 
         .health-bar-container {
             width: 100%;
-            height: 4px;
+            height: 8px; /* Thicker bar */
             background-color: #1a1a1a;
-            border-radius: 2px;
+            border-radius: 4px;
             overflow: hidden;
-            margin-top: 4px;
+            margin-top: 6px; /* More margin */
+            box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.6); /* Stronger inner shadow for depth */
         }
 
         .health-bar {
             height: 100%;
-            background: linear-gradient(to right, #00FF00, #00DDFF);
+            background: linear-gradient(to right, var(--gold-primary), var(--gold-light)); /* Gold gradient */
             width: 0%;
             transition: width 0.5s ease-out;
+            box-shadow: 0 0 8px var(--gold-primary); /* Stronger glow on the bar itself */
         }
-        .health-bar.yellow { background: linear-gradient(to right, #FFFF00, #FFAA00); }
-        .health-bar.red { background: linear-gradient(to right, #FF0000, #FF5500); }
-
-        /* The chat-log CSS is removed as the element is removed */
+        .health-bar.yellow { background: linear-gradient(to right, var(--warning-yellow), #FFAA00); box-shadow: 0 0 8px var(--warning-yellow); }
+        .health-bar.red { background: linear-gradient(to right, var(--error-red), #FF5500); box-shadow: 0 0 8px var(--error-red); }
 
         .central-animation-container {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 250px;
-            height: 250px;
+            width: 300px; /* Larger animation area */
+            height: 300px;
             z-index: 2;
+            display: flex; /* To center the animation within */
+            justify-content: center;
+            align-items: center;
         }
 
         .listening-animation, .speaking-animation, .processing-animation, .sleeping-animation {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+            position: relative; /* Changed to relative for centering within flex container */
+            transform: none; /* Reset transform as flex handles centering */
             border-radius: 50%;
             opacity: 0.8;
             transition: all 0.2s ease-out;
             z-index: 3;
+            box-shadow: 0 0 20px var(--gold-primary), 0 0 40px rgba(255, 215, 0, 0.5); /* Gold glow */
+            filter: saturate(1.5) brightness(1.1); /* Enhance vibrancy */
         }
-        .listening-animation { width: 100px; height: 100px; border: 3px solid #00FF00; animation: pulse 1s infinite alternate; }
-        .speaking-animation { width: 80px; height: 80px; background-color: #00FFFF; animation: bounce 0.5s infinite; }
-        .processing-animation { width: 90px; height: 90px; border: 4px dotted #FFD700; animation: rotate 2s infinite linear; }
-        .sleeping-animation { width: 20px; height: 20px; background-color: #00AAFF; opacity: 0.5; animation: fade 2s infinite alternate; }
+        .listening-animation { width: 120px; height: 120px; border: 4px solid var(--gold-primary); animation: pulse 1s infinite alternate; }
+        .speaking-animation { width: 100px; height: 100px; background-color: var(--gold-accent); animation: bounce 0.5s infinite; }
+        .processing-animation { width: 110px; height: 110px; border: 5px dotted var(--gold-light); animation: rotate 2s infinite linear; }
+        .sleeping-animation { width: 25px; height: 25px; background-color: var(--gold-dark); opacity: 0.6; animation: fade 2s infinite alternate; }
 
-        @keyframes flicker { 0%, 100% { opacity: 1; text-shadow: 0 0 5px #00DDFF; } 50% { opacity: 0.8; text-shadow: none; } }
-        @keyframes pulse { from { transform: translate(-50%, -50%) scale(0.8); opacity: 0.6; } to { transform: translate(-50%, -50%) scale(1.2); opacity: 1; } }
-        @keyframes bounce { 0%, 100% { transform: translate(-50%, -50%) translateY(0); } 50% { transform: translate(-50%, -50%) translateY(-10px); } }
-        @keyframes rotate { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
-        @keyframes fade { from { opacity: 0.2; } to { opacity: 0.8; } }
+        @keyframes flicker { 0%, 100% { opacity: 1; text-shadow: 0 0 10px var(--text-accent); } 50% { opacity: 0.8; text-shadow: none; } }
+        @keyframes pulse { from { transform: scale(0.8); opacity: 0.6; box-shadow: 0 0 15px var(--gold-primary); } to { transform: scale(1.2); opacity: 1; box-shadow: 0 0 30px var(--gold-primary); } }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+        @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes fade { from { opacity: 0.3; } to { opacity: 0.9; } }
 
         .voice-controls {
             position: absolute;
-            top: 120px;
+            top: 140px; /* Adjusted position */
             right: 40px;
             z-index: 10;
             display: flex;
             flex-direction: column;
             align-items: flex-end;
         }
-        .voice-controls label { font-size: 14px; margin-bottom: 5px; color: #00AAFF; }
+        .voice-controls label {
+            font-size: 15px; /* Slightly larger */
+            margin-bottom: 8px; /* More space */
+            color: var(--gold-light); /* Light gold label */
+            text-shadow: 0 0 4px rgba(255, 215, 0, 0.6);
+        }
         .voice-controls select, .voice-controls button {
-            background-color: #0d0d0d;
-            color: #00FF00;
-            border: 1px solid #00AAFF;
-            padding: 8px;
+            background-color: rgba(0, 0, 0, 0.7); /* Darker, more transparent */
+            color: var(--text-primary); /* Gold text */
+            border: 2px solid var(--gold-dark); /* Gold border */
+            padding: 10px; /* More padding */
             font-family: 'Consolas', monospace;
-            font-size: 12px;
-            width: 200px;
+            font-size: 13px; /* Slightly larger font */
+            width: 220px; /* Slightly wider */
             cursor: pointer;
-            margin-bottom: 10px;
+            margin-bottom: 12px; /* More margin */
             text-align: left;
-            transition: all 0.3s;
+            transition: all 0.3s ease-in-out; /* Smoother transition */
+            border-radius: 8px; /* More rounded corners */
+            box-shadow: 0 0 8px rgba(255, 215, 0, 0.6); /* Gold glow */
         }
         .voice-controls button { text-align: center; }
         .voice-controls select:hover, .voice-controls button:hover {
-            background-color: #00AAFF;
-            color: #050505;
-            border-color: #00FFFF;
-            box-shadow: 0 0 5px #00FFFF;
+            background-color: var(--gold-primary);
+            color: var(--dark-background);
+            border-color: var(--gold-light);
+            box-shadow:
+                0 0 15px var(--gold-light),
+                0 0 25px rgba(255, 215, 0, 0.5); /* Stronger hover glow */
+            transform: translateY(-2px) scale(1.02); /* Slight lift and scale */
         }
-        #muteBtn.muted { background-color: #FF0000; border-color: #FF5500; color: #FFFFFF; }
+        #muteBtn.muted {
+            background-color: var(--error-red);
+            border-color: #FF5500;
+            color: var(--white);
+            box-shadow: 0 0 15px var(--error-red);
+        }
 
         .initial-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0, 0, 0, 0.95);
+            background-color: rgba(0, 0, 0, 0.98); /* Almost opaque */
             display: flex; justify-content: center; align-items: center;
-            z-index: 1000; flex-direction: column; gap: 20px;
+            z-index: 1000; flex-direction: column; gap: 25px; /* More space */
         }
         .initial-overlay button {
-            background-color: #00AAFF; color: #FFFFFF; border: 2px solid #00FFFF;
-            padding: 15px 30px; font-family: 'Consolas', monospace; font-size: 24px;
-            cursor: pointer; border-radius: 5px; box-shadow: 0 0 15px #00FFFF;
-            transition: all 0.3s ease;
+            background-color: var(--gold-primary); /* Gold button */
+            color: var(--dark-background); /* Dark text on bright button */
+            border: 3px solid var(--gold-light); /* Thicker border */
+            padding: 18px 35px; /* More padding */
+            font-family: 'Consolas', monospace;
+            font-size: 28px; /* Larger font */
+            cursor: pointer;
+            border-radius: 10px; /* More rounded */
+            box-shadow:
+                0 0 20px var(--gold-light),
+                0 0 40px rgba(255, 215, 0, 0.5); /* Intense gold glow */
+            transition: all 0.4s ease-in-out;
+            text-shadow: 0 0 8px rgba(0, 0, 0, 0.5); /* Dark shadow for contrast */
         }
         .initial-overlay button:hover {
-            background-color: #00FFFF; color: #050505; box-shadow: 0 0 25px #00FFFF;
-            transform: translateY(-2px);
+            background-color: var(--gold-light);
+            color: var(--dark-background);
+            box-shadow:
+                0 0 30px var(--gold-light),
+                0 0 60px rgba(255, 215, 0, 0.7);
+            transform: translateY(-3px) scale(1.03); /* More pronounced lift */
         }
-        .initial-overlay p { color: #00FF00; font-size: 16px; margin-top: 10px; }
+        .initial-overlay p {
+            color: var(--text-primary); /* Gold text */
+            font-size: 18px; /* Larger font */
+            margin-top: 15px;
+            text-shadow: 0 0 8px var(--text-primary); /* Stronger gold glow */
+        }
 
-        /* --- Mobile Responsiveness --- */
+        /* --- Mobile-First Design (max-width: 768px) --- */
         @media (max-width: 768px) {
             body {
                 align-items: flex-start; /* Align to top for better content display */
-                padding-top: 20px;
-                overflow-y: auto; /* Allow scrolling on smaller screens */
+                padding: 0; /* Remove body padding */
+                overflow-y: auto; /* Allow scrolling on smaller screens if content overflows */
             }
 
             .hud-container {
-                width: 95vw; /* Take up more width */
-                height: auto; /* Height adjusts to content */
+                width: 100vw; /* Take up full viewport width */
+                height: 100vh; /* Take up full viewport height */
+                max-width: unset; /* Remove max-width constraint */
                 max-height: unset; /* Remove max-height constraint */
-                min-height: 90vh; /* Ensure it's still tall enough */
-                padding: 15px;
+                padding: 10px; /* Reduced padding for more content space */
                 flex-direction: column;
                 justify-content: flex-start; /* Stack content from top */
-                gap: 20px; /* Add space between main sections */
+                gap: 10px; /* Reduced space between main sections */
+                border: none; /* Remove main border for full screen feel */
+                box-shadow: none; /* Remove main box shadow */
+                border-top: 2px solid var(--accent-border); /* Simple top/bottom borders */
+                border-bottom: 2px solid var(--accent-border);
+                box-shadow: 0 0 8px var(--accent-shadow); /* Subtle glow for mobile container */
+                border-radius: 0; /* No rounded corners for full screen */
+            }
+
+            .hud-container::before {
+                background-size: 10px 10px; /* Even smaller grid for mobile */
+                animation-duration: 40s; /* Slightly faster pan */
+                opacity: 0.2;
+            }
+            .hud-container::after {
+                opacity: 0.05; /* Even more subtle scanlines */
             }
 
             .hud-border-inner, .corner-accent {
@@ -252,71 +394,117 @@
             }
 
             .jarvis-title {
-                position: static; /* Remove absolute positioning */
-                transform: none; /* Remove transform */
-                margin-bottom: 15px;
-                font-size: 20px;
-                text-align: center;
-                width: auto; /* Adjust width naturally */
+                position: static;
+                transform: none;
+                margin-top: 10px;
+                margin-bottom: 8px;
+                font-size: 18px; /* Smaller font */
+                letter-spacing: 1px;
+                text-shadow: 0 0 6px var(--text-accent), 0 0 12px var(--text-accent); /* Adjusted glow */
             }
 
             .jarvis-title::after {
-                width: 100px; /* Smaller underline */
+                width: 60px; /* Smaller underline */
+                height: 1px;
+                margin-top: 4px;
+                box-shadow: 0 0 4px var(--gold-dark);
             }
 
             .status-display {
-                position: static; /* Remove absolute positioning */
-                transform: none; /* Remove transform */
-                margin-bottom: 20px;
-                font-size: 16px;
-                width: auto;
+                position: static;
+                transform: none;
+                margin-bottom: 10px;
+                font-size: 13px; /* Smaller font */
+                text-shadow: 0 0 3px var(--text-primary);
+            }
+
+            /* New container for bottom widgets on mobile */
+            .mobile-bottom-controls {
+                display: flex;
+                flex-direction: column; /* Stack by default */
+                width: 100%;
+                gap: 10px; /* Space between widgets */
+                align-items: center; /* Center widgets within this container */
+                flex-shrink: 0; /* Prevent shrinking */
+                padding-bottom: 10px; /* Padding at the bottom of the screen */
+                flex-grow: 0; /* Do not grow, let central animation take space */
             }
 
             .system-health-widget {
-                position: static; /* Remove absolute positioning */
-                width: 100%; /* Take full width */
-                max-width: 320px; /* Constrain width for better readability */
-                margin: 0 auto 20px auto; /* Center and add margin */
+                position: static;
+                width: 95%; /* Take up more width */
+                max-width: 300px; /* Constrain width for readability */
+                margin: 0 auto;
                 padding: 10px;
                 box-sizing: border-box;
+                box-shadow: 0 0 6px rgba(255, 215, 0, 0.2); /* Adjusted gold glow */
+                border-radius: 8px; /* Consistent rounded corners */
             }
             .health-label {
-                width: 60px; /* Smaller label width */
-                font-size: 12px;
+                width: 50px; /* Smaller label width */
+                font-size: 9px;
             }
             .health-value {
-                font-size: 12px;
+                font-size: 9px;
             }
+            .health-bar-container {
+                height: 4px; /* Thinner bar */
+                border-radius: 2px;
+            }
+            .health-bar {
+                box-shadow: 0 0 4px var(--gold-primary);
+            }
+            .health-bar.yellow { box-shadow: 0 0 4px var(--warning-yellow); }
+            .health-bar.red { box-shadow: 0 0 4px var(--error-red); }
 
             .voice-controls {
-                position: static; /* Remove absolute positioning */
-                width: 100%; /* Take full width */
-                max-width: 320px; /* Constrain width */
-                margin: 0 auto 20px auto; /* Center and add margin */
-                align-items: center; /* Center buttons */
+                position: static;
+                width: 95%; /* Take up more width */
+                max-width: 300px; /* Constrain width */
+                margin: 0 auto;
+                align-items: center;
+            }
+            .voice-controls label {
+                font-size: 10px;
+                margin-bottom: 6px;
             }
             .voice-controls select, .voice-controls button {
-                width: 100%; /* Full width within its container */
-                max-width: 280px; /* Limit max width */
-                font-size: 11px;
-                padding: 10px 5px; /* Adjust padding */
+                width: 100%;
+                max-width: 200px; /* Limit max width */
+                font-size: 9px;
+                padding: 7px 4px;
+                border-radius: 6px;
+                box-shadow: 0 0 3px rgba(255, 215, 0, 0.3); /* Gold glow */
+            }
+            .voice-controls select:hover, .voice-controls button:hover {
+                box-shadow: 0 0 6px var(--gold-primary);
             }
 
             .central-animation-container {
-                position: static; /* Remove absolute positioning */
-                transform: none; /* Remove transform */
-                margin: 20px auto; /* Center and add vertical spacing */
-                width: 150px; /* Make smaller */
-                height: 150px; /* Make smaller */
-                flex-shrink: 0; /* Prevent it from shrinking too much */
+                position: static;
+                transform: none;
+                margin: 10px auto; /* Reduced margin */
+                width: 140px; /* Smaller animation */
+                height: 140px;
+                flex-grow: 1; /* Allow it to grow and push bottom elements down */
             }
-            .listening-animation { width: 80px; height: 80px; border-width: 2px; }
-            .speaking-animation { width: 60px; height: 60px; }
-            .processing-animation { width: 70px; height: 70px; border-width: 3px; }
-            .sleeping-animation { width: 15px; height: 15px; }
+            .listening-animation { width: 50px; height: 50px; border-width: 1.5px; box-shadow: 0 0 10px var(--gold-primary); }
+            .speaking-animation { width: 45px; height: 45px; box-shadow: 0 0 10px var(--gold-primary); }
+            .processing-animation { width: 50px; height: 50px; border-width: 2.5px; box-shadow: 0 0 10px var(--gold-light); }
+            .sleeping-animation { width: 10px; height: 10px; box-shadow: 0 0 6px var(--gold-dark); }
 
-
-            /* The chat-log CSS is removed as the element is removed */
+            /* Responsive adjustment for slightly wider mobile screens (e.g., landscape phones, small tablets) */
+            @media (min-width: 480px) and (max-width: 768px) {
+                .mobile-bottom-controls {
+                    flex-direction: row; /* Arrange side-by-side */
+                    justify-content: space-around;
+                    flex-wrap: wrap; /* Allow wrapping if needed */
+                }
+                .system-health-widget, .voice-controls {
+                    width: 48%; /* Adjust width to fit two columns */
+                    margin: 0; /* Reset margin */
+                }
+            }
         }
     </style>
 </head>
@@ -336,31 +524,31 @@
         <div class="jarvis-title">J.A.R.V.I.S. 2.0</div>
         <div class="status-display" id="statusDisplay">Initializing...</div>
 
-        <div class="system-health-widget">
-            <div class="health-item"><span class="health-label">CPU Load:</span><span class="health-value" id="cpuValue">0%</span><div class="health-bar-container"><div class="health-bar" id="cpuBar"></div></div></div>
-            <div class="health-item"><span class="health-label">RAM Usage:</span><span class="health-value" id="ramValue">0%</span><div class="health-bar-container"><div class="health-bar" id="ramBar"></div></div></div>
-            <div class="health-item"><span class="health-label">Network:</span><span class="health-value" id="netValue">0Kb/s</span><div class="health-bar-container"><div class="health-bar" id="netBar"></div></div></div>
-            <div class="health-item"><span class="health-label">Time:</span><span class="health-value" id="dateTimeReadout"></span></div>
-            <div class="health-item"><span class="health-label">Status:</span><span class="health-value" id="systemStatus">Initializing</span></div>
-        </div>
-
-        <div class="voice-controls">
-            <label for="voiceSelect">Select Voice:</label>
-            <select id="voiceSelect"></select>
-            <button id="muteBtn">Mute J.A.R.V.I.S.</button>
-        </div>
-
         <div class="central-animation-container">
             <div id="stateAnimation" class="sleeping-animation"></div>
         </div>
 
-        <!-- The chatLog element has been removed -->
+        <!-- New container for bottom widgets on mobile -->
+        <div class="mobile-bottom-controls">
+            <div class="system-health-widget">
+                <div class="health-item"><span class="health-label">CPU Load:</span><span class="health-value" id="cpuValue">0%</span><div class="health-bar-container"><div class="health-bar" id="cpuBar"></div></div></div>
+                <div class="health-item"><span class="health-label">RAM Usage:</span><span class="health-value" id="ramValue">0%</span><div class="health-bar-container"><div class="health-bar" id="ramBar"></div></div></div>
+                <div class="health-item"><span class="health-label">Network:</span><span class="health-value" id="netValue">0Kb/s</span><div class="health-bar-container"><div class="health-bar" id="netBar"></div></div></div>
+                <div class="health-item"><span class="health-label">Time:</span><span class="health-value" id="dateTimeReadout"></span></div>
+                <div class="health-item"><span class="health-label">Status:</span><span class="health-value" id="systemStatus">Initializing</span></div>
+            </div>
+
+            <div class="voice-controls">
+                <label for="voiceSelect">Select Voice:</label>
+                <select id="voiceSelect"></select>
+                <button id="muteBtn">Mute J.A.R.V.I.S.</button>
+            </div>
+        </div>
     </div>
 
     <script>
         // --- DOM Elements ---
         const statusDisplay = document.getElementById('statusDisplay');
-        // const chatLog = document.getElementById('chatLog'); // Removed
         const dateTimeReadout = document.getElementById('dateTimeReadout');
         const stateAnimation = document.getElementById('stateAnimation');
         const voiceSelect = document.getElementById('voiceSelect');
@@ -397,20 +585,18 @@
         // --- Core Functions ---
 
         /**
-         * Logs a message to the chat display, formatted by sender.
-         * This function is now commented out as there is no chat display.
+         * Logs a message to the console. Used after removing the chat display.
          * @param {string} message - The message to log.
          * @param {'user' | 'jarvis'} sender - The sender of the message.
          */
         function logToChat(message, sender) {
-            // No chat log element to append to
             console.log(`${sender.toUpperCase()}: ${message}`); // Log to console for debugging
         }
 
         /**
          * Updates the main status display and the state animation.
          * @param {string} message - The status message to display.
-         * @param {string} state - The new system state ('listening', 'speaking', etc.).
+         * @param {string} state - The new system state ('listening', 'speaking', 'processing', 'sleeping').
          */
         function updateGUI(message, state) {
             statusDisplay.textContent = message;
@@ -490,7 +676,6 @@
             }
             if (transcript.includes('clear chat')) {
                 const response = "Clearing the chat history.";
-                // chatLog.innerHTML = ''; // Removed
                 chatHistory = []; // Still clear the internal history
                 speak(response);
                 return;
