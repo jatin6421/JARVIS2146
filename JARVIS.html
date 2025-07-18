@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>J.A.R.V.I.S. 2.0 - Gemini Powered</title>
+    <title>J.A.R.V.I.S. 2.0</title>
     <style>
         /* CSS Variables for Blue, Green & Saffron Theme */
         :root {
@@ -372,6 +372,156 @@
             text-shadow: 0 0 10px var(--green-light); /* Stronger green glow */
         }
 
+        /* Firebase Auth Form Styling */
+        .auth-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 350px; /* Fixed width for desktop */
+            max-width: 90%; /* Max width for responsiveness */
+            padding: 30px;
+            background-color: rgba(0, 0, 0, 0.7);
+            border: 2px solid var(--blue-dark);
+            border-radius: 15px;
+            box-shadow: 0 0 25px var(--blue-glow-medium);
+            text-align: center;
+        }
+
+        .auth-form h2 {
+            color: var(--text-accent);
+            font-size: 28px;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px var(--text-accent);
+        }
+
+        .auth-form input {
+            background-color: rgba(0, 0, 0, 0.6);
+            border: 1px solid var(--green-dark);
+            color: var(--text-primary);
+            padding: 15px;
+            font-size: 16px;
+            border-radius: 8px;
+            outline: none;
+            box-shadow: inset 0 0 8px rgba(51, 255, 51, 0.2);
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        .auth-form input:focus {
+            border-color: var(--green-primary);
+            box-shadow: inset 0 0 12px rgba(51, 255, 51, 0.4), 0 0 8px var(--green-primary);
+        }
+
+        .auth-form button {
+            background-color: var(--green-primary);
+            color: var(--dark-background);
+            border: none;
+            padding: 15px 25px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s, box-shadow 0.3s;
+            box-shadow: 0 0 15px var(--green-glow-medium);
+        }
+
+        .auth-form button:hover {
+            background-color: var(--green-light);
+            transform: translateY(-2px);
+            box-shadow: 0 0 25px var(--green-glow-strong);
+        }
+
+        .auth-form .toggle-auth-mode {
+            background: none;
+            border: none;
+            color: var(--blue-primary);
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 10px;
+            text-decoration: underline;
+            transition: color 0.3s;
+        }
+
+        .auth-form .toggle-auth-mode:hover {
+            color: var(--blue-light);
+        }
+
+        /* Message Box Styling */
+        .message-box {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.9);
+            border: 2px solid var(--saffron-primary);
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 0 30px var(--saffron-glow-medium);
+            z-index: 1001;
+            display: none; /* Hidden by default */
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .message-box p {
+            color: var(--text-primary);
+            font-size: 18px;
+            margin: 0;
+        }
+
+        .message-box button {
+            background-color: var(--saffron-primary);
+            color: var(--dark-background);
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+
+        .message-box button:hover {
+            background-color: var(--saffron-light);
+            transform: translateY(-2px);
+        }
+
+        .user-id-display {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: var(--blue-light);
+            font-size: 14px;
+            text-align: center;
+            width: 90%;
+            word-wrap: break-word; /* Ensure long IDs wrap */
+            text-shadow: 0 0 5px var(--blue-glow-subtle);
+            z-index: 10;
+        }
+
+        .logout-button {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background-color: var(--error-red);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s, transform 0.2s;
+            z-index: 10;
+            box-shadow: 0 0 10px var(--error-red);
+        }
+
+        .logout-button:hover {
+            background-color: #CC0000;
+            transform: translateY(-2px);
+        }
+
         /* --- Mobile-First Design (max-width: 768px) --- */
         @media (max-width: 768px) {
             body {
@@ -510,13 +660,62 @@
             .speaking-animation { width: 80px; height: 80px; background-color: var(--blue-primary); box-shadow: 0 0 15px var(--blue-primary); }
             .processing-animation { width: 85px; height: 85px; border-width: 4px; box-shadow: 0 0 15px var(--saffron-light); }
             .sleeping-animation { width: 25px; height: 25px; background-color: var(--blue-dark); box-shadow: 0 0 8px var(--blue-dark); }
+
+            .auth-form {
+                width: 95%;
+                padding: 20px;
+                gap: 10px;
+            }
+            .auth-form h2 {
+                font-size: 24px;
+                margin-bottom: 15px;
+            }
+            .auth-form input {
+                padding: 12px;
+                font-size: 14px;
+            }
+            .auth-form button {
+                padding: 12px 20px;
+                font-size: 16px;
+            }
+            .auth-form .toggle-auth-mode {
+                font-size: 13px;
+            }
+            .message-box {
+                max-width: 90%;
+                padding: 20px;
+            }
+            .message-box p {
+                font-size: 16px;
+            }
+            .message-box button {
+                padding: 8px 15px;
+                font-size: 14px;
+            }
+            .user-id-display {
+                font-size: 12px;
+                bottom: 10px;
+            }
+            .logout-button {
+                top: 10px;
+                right: 10px;
+                padding: 6px 10px;
+                font-size: 12px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="initial-overlay" id="initialOverlay">
-        <button id="startButton">Start J.A.R.V.I.S.</button>
-        <p>Click to initialize voice and audio systems.</p>
+        <div class="auth-form" id="authForm">
+            <h2 id="authTitle">Login to J.A.R.V.I.S.</h2>
+            <input type="email" id="emailInput" placeholder="Email" required>
+            <input type="password" id="passwordInput" placeholder="Password" required>
+            <button id="authSubmitBtn">Login</button>
+            <button class="toggle-auth-mode" id="toggleAuthMode">Don't have an account? Sign Up</button>
+            <button id="signInAnonymouslyBtn">Continue as Guest</button>
+        </div>
+        <p id="initialOverlayMessage">Please login or sign up to proceed.</p>
     </div>
 
     <div class="hud-container" style="opacity: 0;">
@@ -547,11 +746,25 @@
                 <label for="voiceSelect">Select Voice:</label>
                 <select id="voiceSelect"></select>
                 <button id="muteBtn">Mute J.A.R.V.I.S.</button>
+                <button id="logoutBtn" class="logout-button" style="display: none;">Logout</button>
             </div>
         </div>
+        <div class="user-id-display" id="userIdDisplay"></div>
     </div>
 
-    <script>
+    <!-- Message Box HTML -->
+    <div class="message-box" id="messageBox">
+        <p id="messageBoxText"></p>
+        <button id="messageBoxCloseBtn">OK</button>
+    </div>
+
+    <script type="module">
+        // --- Firebase Imports ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        // Firestore is imported but not used for this specific request, as no data persistence was explicitly asked for beyond auth.
+        import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
         // --- DOM Elements ---
         const statusDisplay = document.getElementById('statusDisplay');
         const dateTimeReadout = document.getElementById('dateTimeReadout');
@@ -559,7 +772,6 @@
         const voiceSelect = document.getElementById('voiceSelect');
         const muteBtn = document.getElementById('muteBtn');
         const initialOverlay = document.getElementById('initialOverlay');
-        const startButton = document.getElementById('startButton');
         const hudContainer = document.querySelector('.hud-container');
         const cpuValue = document.getElementById('cpuValue');
         const cpuBar = document.getElementById('cpuBar');
@@ -568,19 +780,58 @@
         const netValue = document.getElementById('netValue');
         const netBar = document.getElementById('netBar');
         const systemStatus = document.getElementById('systemStatus');
+        const userIdDisplay = document.getElementById('userIdDisplay');
+        const logoutBtn = document.getElementById('logoutBtn');
+
+        // Auth Form Elements
+        const authForm = document.getElementById('authForm');
+        const authTitle = document.getElementById('authTitle');
+        const emailInput = document.getElementById('emailInput');
+        const passwordInput = document.getElementById('passwordInput');
+        const authSubmitBtn = document.getElementById('authSubmitBtn');
+        const toggleAuthMode = document.getElementById('toggleAuthMode');
+        const signInAnonymouslyBtn = document.getElementById('signInAnonymouslyBtn');
+        const initialOverlayMessage = document.getElementById('initialOverlayMessage');
+
+        // Message Box Elements
+        const messageBox = document.getElementById('messageBox');
+        const messageBoxText = document.getElementById('messageBoxText');
+        const messageBoxCloseBtn = document.getElementById('messageBoxCloseBtn');
 
         // --- Configuration ---
         // IMPORTANT: If you want to use models other than gemini-2.0-flash, provide an API key here. Otherwise, leave this as-is.
-        const API_KEY = ""; 
+        const API_KEY = "";
         const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`;
         
+        // Firebase Config and App ID (provided by Canvas environment)
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // --- Firebase Initialization ---
+        let app;
+        let auth;
+        let db; // Firestore instance, though not used for this specific feature
+
+        try {
+            app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app); // Initialize Firestore, even if not explicitly used for this feature
+            console.log("Firebase initialized successfully.");
+        } catch (error) {
+            console.error("Error initializing Firebase:", error);
+            showMessageBox(`Failed to initialize Firebase: ${error.message}. Some features may not work.`);
+        }
+
         // --- State Variables ---
         let currentState = "sleeping";
         let currentVoice = null;
         let isMuted = false;
         let audioContext;
-        let chatHistory = []; // chatHistory is still maintained for Gemini API context
-        let isRecognitionActive = false; // New flag to manage recognition state
+        let chatHistory = [];
+        let isRecognitionActive = false;
+        let isAuthReady = false; // Flag to indicate if Firebase auth state is ready
+        let authMode = 'login'; // 'login' or 'signup'
 
         // --- Web Speech API ---
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -588,6 +839,22 @@
         let recognition;
 
         // --- Core Functions ---
+
+        /**
+         * Displays a custom message box.
+         * @param {string} message - The message to display.
+         */
+        function showMessageBox(message) {
+            messageBoxText.textContent = message;
+            messageBox.style.display = 'flex';
+        }
+
+        /**
+         * Hides the custom message box.
+         */
+        function hideMessageBox() {
+            messageBox.style.display = 'none';
+        }
 
         /**
          * Logs a message to the console. Used after removing the chat display.
@@ -716,13 +983,13 @@
 
                 const data = await response.json();
                 
-                if (data.candidates && data.candidates.length > 0) {
+                if (data.candidates && data.candidates.length > 0 && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts.length > 0) {
                     const aiResponseText = data.candidates[0].content.parts[0].text;
                     logToChat(aiResponseText, 'jarvis'); // This will now log to console
                     chatHistory.push({ role: "model", parts: [{ text: aiResponseText }] });
                     speak(aiResponseText);
                 } else {
-                    throw new Error("Invalid response structure from AI.");
+                    throw new Error("Invalid response structure from AI or no content.");
                 }
 
             } catch (error) {
@@ -735,12 +1002,13 @@
 
 
         /**
-         * Initializes the application after the user clicks the start button.
+         * Initializes the application after successful authentication.
          */
-        async function initialize() {
+        async function startJarvisApp() {
             initialOverlay.style.display = 'none';
             hudContainer.style.transition = 'opacity 1s ease-in';
             hudContainer.style.opacity = '1';
+            logoutBtn.style.display = 'block'; // Show logout button
 
             // Initialize AudioContext on user gesture
             if (!audioContext) {
@@ -860,14 +1128,120 @@
             });
         }
 
+        // --- Firebase Authentication Logic ---
+
+        /**
+         * Handles user login or signup based on current auth mode.
+         */
+        async function handleAuthSubmit() {
+            const email = emailInput.value;
+            const password = passwordInput.value;
+
+            if (!email || !password) {
+                showMessageBox("Please enter both email and password.");
+                return;
+            }
+
+            try {
+                if (authMode === 'signup') {
+                    await createUserWithEmailAndPassword(auth, email, password);
+                    showMessageBox("Account created successfully! You are now logged in.");
+                } else { // login mode
+                    await signInWithEmailAndPassword(auth, email, password);
+                    showMessageBox("Logged in successfully!");
+                }
+            } catch (error) {
+                console.error("Authentication error:", error);
+                let errorMessage = "Authentication failed.";
+                switch (error.code) {
+                    case 'auth/email-already-in-use':
+                        errorMessage = "This email is already in use. Try logging in.";
+                        break;
+                    case 'auth/invalid-email':
+                        errorMessage = "Invalid email address.";
+                        break;
+                    case 'auth/operation-not-allowed':
+                        errorMessage = "Email/password sign-in is not enabled. Please contact support.";
+                        break;
+                    case 'auth/weak-password':
+                        errorMessage = "Password is too weak. Please use at least 6 characters.";
+                        break;
+                    case 'auth/user-not-found':
+                    case 'auth/wrong-password':
+                        errorMessage = "Invalid email or password.";
+                        break;
+                    default:
+                        errorMessage += ` (${error.message})`;
+                }
+                showMessageBox(errorMessage);
+            }
+        }
+
+        /**
+         * Toggles between login and signup modes.
+         */
+        function toggleAuthFormMode() {
+            if (authMode === 'login') {
+                authMode = 'signup';
+                authTitle.textContent = 'Sign Up for J.A.R.V.I.S.';
+                authSubmitBtn.textContent = 'Sign Up';
+                toggleAuthMode.textContent = 'Already have an account? Login';
+                initialOverlayMessage.textContent = 'Create your account to proceed.';
+            } else {
+                authMode = 'login';
+                authTitle.textContent = 'Login to J.A.R.V.I.S.';
+                authSubmitBtn.textContent = 'Login';
+                toggleAuthMode.textContent = "Don't have an account? Sign Up";
+                initialOverlayMessage.textContent = 'Please login or sign up to proceed.';
+            }
+        }
+
+        /**
+         * Signs in the user anonymously.
+         */
+        async function handleSignInAnonymously() {
+            try {
+                await signInAnonymously(auth);
+                showMessageBox("Signed in as guest. Some features might be limited.");
+            } catch (error) {
+                console.error("Anonymous sign-in error:", error);
+                showMessageBox(`Failed to sign in as guest: ${error.message}`);
+            }
+        }
+
+        /**
+         * Handles user logout.
+         */
+        async function handleLogout() {
+            try {
+                await signOut(auth);
+                showMessageBox("You have been logged out.");
+                // Reset UI to initial overlay
+                hudContainer.style.opacity = '0';
+                initialOverlay.style.display = 'flex';
+                logoutBtn.style.display = 'none';
+                userIdDisplay.textContent = '';
+                // Stop recognition if active
+                if (recognition && isRecognitionActive) {
+                    recognition.stop();
+                    isRecognitionActive = false;
+                }
+                // Cancel any speech
+                SpeechSynthesis.cancel();
+                // Reset chat history
+                chatHistory = [];
+                updateGUI("Offline", "sleeping");
+            } catch (error) {
+                console.error("Logout error:", error);
+                showMessageBox(`Failed to logout: ${error.message}`);
+            }
+        }
+
         // --- Event Listeners ---
-        startButton.addEventListener('click', initialize);
-
-        voiceSelect.addEventListener('change', () => {
-            const selectedVoiceName = voiceSelect.selectedOptions[0].getAttribute('data-name');
-            currentVoice = SpeechSynthesis.getVoices().find(voice => voice.name === selectedVoiceName);
-        });
-
+        authSubmitBtn.addEventListener('click', handleAuthSubmit);
+        toggleAuthMode.addEventListener('click', toggleAuthFormMode);
+        signInAnonymouslyBtn.addEventListener('click', handleSignInAnonymously);
+        messageBoxCloseBtn.addEventListener('click', hideMessageBox);
         muteBtn.addEventListener('click', () => {
             isMuted = !isMuted;
             if (isMuted) {
@@ -880,7 +1254,43 @@
                 speak("Audio enabled.");
             }
         });
+        logoutBtn.addEventListener('click', handleLogout);
+        voiceSelect.addEventListener('change', () => {
+            const selectedVoiceName = voiceSelect.selectedOptions[0].getAttribute('data-name');
+            currentVoice = SpeechSynthesis.getVoices().find(voice => voice.name === selectedVoiceName);
+        });
 
+        // --- Firebase Auth State Observer ---
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                // User is signed in.
+                console.log("User signed in:", user.uid);
+                userIdDisplay.textContent = `User ID: ${user.uid}`;
+                // Attempt to sign in with custom token if available (Canvas environment)
+                if (initialAuthToken && !user.isAnonymous) { // Only try custom token if not already anonymous
+                    try {
+                        await signInWithCustomToken(auth, initialAuthToken);
+                        console.log("Signed in with custom token.");
+                    } catch (error) {
+                        console.warn("Custom token sign-in failed, proceeding with current user:", error);
+                    }
+                }
+                isAuthReady = true; // Auth state is now ready
+                startJarvisApp(); // Start the main application
+            } else {
+                // User is signed out.
+                console.log("User signed out.");
+                isAuthReady = true; // Auth state is ready, user is signed out
+                initialOverlay.style.display = 'flex';
+                hudContainer.style.opacity = '0';
+                logoutBtn.style.display = 'none';
+                userIdDisplay.textContent = '';
+            }
+        });
+
+        // Initial check for auth state when the script loads
+        // This is handled by onAuthStateChanged, which fires immediately on load.
+        // The initial overlay will remain visible until onAuthStateChanged resolves.
     </script>
 </body>
 </html>
