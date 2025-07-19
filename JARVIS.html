@@ -336,6 +336,46 @@
             box-shadow: 0 0 20px var(--error-red); /* Stronger glow for muted */
         }
 
+        /* --- Chat Log Styles --- */
+        .chat-log {
+            position: absolute;
+            bottom: 40px; /* Positioned above the bottom border */
+            left: 40px;
+            width: calc(100% - 80px); /* Full width minus padding */
+            max-width: 920px; /* Max width for readability */
+            height: 120px; /* Fixed height for the chat log */
+            background-color: rgba(0, 0, 0, 0.5); /* Slightly more opaque */
+            border: 1px solid var(--blue-dark); /* Blue border */
+            padding: 15px; /* More padding */
+            overflow-y: auto; /* Scroll for overflowing content */
+            font-size: 14px; /* Slightly smaller font for chat */
+            color: var(--text-primary); /* Green text */
+            box-shadow:
+                0 0 10px var(--blue-glow-medium),
+                inset 0 0 5px var(--blue-glow-subtle); /* Blue outer and inner glow */
+            z-index: 5;
+            border-radius: 10px; /* Rounded corners */
+            display: flex;
+            flex-direction: column-reverse; /* Newest messages at the bottom */
+        }
+
+        .chat-message {
+            margin-bottom: 8px; /* Space between messages */
+            line-height: 1.4;
+        }
+
+        .chat-message.user {
+            color: var(--saffron-light); /* Saffron for user messages */
+            text-align: right;
+            text-shadow: 0 0 5px var(--saffron-glow-subtle);
+        }
+
+        .chat-message.jarvis {
+            color: var(--green-light); /* Green for Jarvis messages */
+            text-align: left;
+            text-shadow: 0 0 5px var(--green-glow-subtle);
+        }
+
         .initial-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background-color: rgba(0, 0, 0, 0.99); /* Almost opaque */
@@ -510,6 +550,22 @@
             .speaking-animation { width: 80px; height: 80px; background-color: var(--blue-primary); box-shadow: 0 0 15px var(--blue-primary); }
             .processing-animation { width: 85px; height: 85px; border-width: 4px; box-shadow: 0 0 15px var(--saffron-light); }
             .sleeping-animation { width: 25px; height: 25px; background-color: var(--blue-dark); box-shadow: 0 0 8px var(--blue-dark); }
+
+            /* Mobile chat log adjustments */
+            .chat-log {
+                position: static; /* Remove absolute positioning */
+                width: 95%; /* Take up more width */
+                max-width: 320px; /* Constrain width */
+                margin: 0 auto 10px auto; /* Center and add bottom margin */
+                height: 100px; /* Slightly smaller height */
+                padding: 10px; /* Reduced padding */
+                font-size: 12px; /* Smaller font */
+                box-shadow: 0 0 8px var(--blue-glow-subtle); /* Adjusted glow */
+                order: 1; /* Place it at the top of the mobile-bottom-controls flex container */
+            }
+            .chat-message {
+                margin-bottom: 5px; /* Reduced margin */
+            }
         }
     </style>
 </head>
@@ -548,6 +604,11 @@
                 <select id="voiceSelect"></select>
                 <button id="muteBtn">Mute J.A.R.V.I.S.</button>
             </div>
+            
+            <!-- Chat Log Display -->
+            <div class="chat-log" id="chatLog">
+                <!-- Messages will be appended here -->
+            </div>
         </div>
     </div>
 
@@ -568,6 +629,7 @@
         const netValue = document.getElementById('netValue');
         const netBar = document.getElementById('netBar');
         const systemStatus = document.getElementById('systemStatus');
+        const chatLog = document.getElementById('chatLog'); // New: Chat log element
 
         // --- Configuration ---
         // IMPORTANT: If you want to use models other than gemini-2.0-flash, provide an API key here. Otherwise, leave this as-is.
@@ -590,12 +652,22 @@
         // --- Core Functions ---
 
         /**
-         * Logs a message to the console. Used after removing the chat display.
+         * Logs a message to the visual chat log and console.
          * @param {string} message - The message to log.
          * @param {'user' | 'jarvis'} sender - The sender of the message.
          */
         function logToChat(message, sender) {
             console.log(`${sender.toUpperCase()}: ${message}`); // Log to console for debugging
+
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('chat-message', sender);
+            messageElement.textContent = message;
+            chatLog.prepend(messageElement); // Add new messages to the top (visually reverse order)
+
+            // Keep only the last 10 messages to prevent overflow and maintain performance
+            while (chatLog.children.length > 10) {
+                chatLog.removeChild(chatLog.lastChild);
+            }
         }
 
         /**
@@ -659,7 +731,7 @@
          * @param {string} transcript - The transcribed text from the user.
          */
         async function handleCommand(transcript) {
-            logToChat(transcript, 'user'); // This will now log to console
+            logToChat(transcript, 'user');
             
             // Add user message to chat history for context
             chatHistory.push({ role: "user", parts: [{ text: transcript }] });
@@ -667,21 +739,22 @@
             // Simple client-side commands
             if (transcript.includes('open youtube')) {
                 const response = "Opening YouTube.";
-                logToChat(response, 'jarvis'); // This will now log to console
+                logToChat(response, 'jarvis');
                 speak(response, () => window.open("https://www.youtube.com", '_blank'));
                 chatHistory.push({ role: "model", parts: [{ text: response }] });
                 return;
             }
             if (transcript.includes('open google')) {
                 const response = "Opening Google.";
-                logToChat(response, 'jarvis'); // This will now log to console
+                logToChat(response, 'jarvis');
                 speak(response, () => window.open("https://www.google.com", '_blank'));
                 chatHistory.push({ role: "model", parts: [{ text: response }] });
                 return;
             }
             if (transcript.includes('clear chat')) {
                 const response = "Clearing the chat history.";
-                chatHistory = []; // Still clear the internal history
+                chatHistory = []; // Clear the internal history
+                chatLog.innerHTML = ''; // Clear the visual chat log
                 speak(response);
                 return;
             }
@@ -718,7 +791,7 @@
                 
                 if (data.candidates && data.candidates.length > 0) {
                     const aiResponseText = data.candidates[0].content.parts[0].text;
-                    logToChat(aiResponseText, 'jarvis'); // This will now log to console
+                    logToChat(aiResponseText, 'jarvis');
                     chatHistory.push({ role: "model", parts: [{ text: aiResponseText }] });
                     speak(aiResponseText);
                 } else {
@@ -728,7 +801,7 @@
             } catch (error) {
                 console.error("Gemini API Error:", error);
                 const errorMessage = "I'm sorry, I'm having trouble connecting to my core intelligence. Please check the console for errors.";
-                logToChat(errorMessage, 'jarvis'); // This will now log to console
+                logToChat(errorMessage, 'jarvis');
                 speak(errorMessage);
             }
         }
@@ -790,7 +863,7 @@
                 };
 
             } else {
-                logToChat("Speech Recognition is not supported in this browser.", 'jarvis'); // This will now log to console
+                logToChat("Speech Recognition is not supported in this browser.", 'jarvis');
             }
 
             // Setup Speech Synthesis
@@ -804,7 +877,7 @@
             setInterval(updateSimulatedData, 1000);
             
             const greeting = "J.A.R.V.I.S. system is online. How can I assist you?";
-            logToChat(greeting, 'jarvis'); // This will now log to console
+            logToChat(greeting, 'jarvis');
             speak(greeting);
         }
 
@@ -884,3 +957,4 @@
     </script>
 </body>
 </html>
+
