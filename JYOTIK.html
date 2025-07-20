@@ -89,7 +89,7 @@
             width: 100%;
             height: 100%;
             background-image:
-                linear-gradient(to right, var(--green-glow-subble) 1px, transparent 1px), /* Green grid */
+                linear-gradient(to right, var(--green-glow-subtle) 1px, transparent 1px), /* Green grid */
                 linear-gradient(to bottom, var(--green-glow-subtle) 1px, transparent 1px);
             background-size: 25px 25px; /* Slightly larger grid for desktop */
             animation: panBackground 60s linear infinite;
@@ -266,6 +266,7 @@
             display: flex; /* To center the animation within */
             justify-content: center;
             align-items: center;
+            flex-grow: 1; /* Allow it to grow on mobile */
         }
 
         .listening-animation, .speaking-animation, .processing-animation, .sleeping-animation {
@@ -591,11 +592,6 @@
 
         <!-- New container for bottom widgets on mobile -->
         <div class="mobile-bottom-controls">
-            <!-- Chat Log Display moved here for mobile-first stacking -->
-            <div class="chat-log" id="chatLog">
-                <!-- Messages will be appended here -->
-            </div>
-
             <div class="system-health-widget">
                 <div class="health-item"><span class="health-label">CPU Load:</span><span class="health-value" id="cpuValue">0%</span><div class="health-bar-container"><div class="health-bar" id="cpuBar"></div></div></div>
                 <div class="health-item"><span class="health-label">RAM Usage:</span><span class="health-value" id="ramValue">0%</span><div class="health-bar-container"><div class="health-bar" id="ramBar"></div></div></div>
@@ -608,6 +604,11 @@
                 <label for="voiceSelect">Select Voice:</label>
                 <select id="voiceSelect"></select>
                 <button id="muteBtn">Mute JYOTIK</button>
+            </div>
+            
+            <!-- Chat Log Display -->
+            <div class="chat-log" id="chatLog">
+                <!-- Messages will be appended here -->
             </div>
         </div>
     </div>
@@ -632,8 +633,9 @@
         const chatLog = document.getElementById('chatLog'); // New: Chat log element
 
         // --- Configuration ---
-        // IMPORTANT: If you want to use models other than gemini-2.0-flash, provide an API key here. Otherwise, leave this as-is.
-        const API_KEY = "AIzaSyBIuMDqeJLSzgQLwwyBJvkTIRJkV3ipaks"; 
+        // IMPORTANT: Leave API_KEY as an empty string if using gemini-2.0-flash (default).
+        // If you want to use other models (e.g., gemini-1.5-pro-latest), provide your API key here.
+        const API_KEY = ""; 
         const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`;
         
         // --- State Variables ---
