@@ -279,6 +279,7 @@
             filter: saturate(1.8) brightness(1.2); /* Enhance vibrancy even more */
         }
         .listening-animation { width: 140px; height: 140px; border: 5px solid var(--green-primary); animation: pulse 1s infinite alternate; }
+        .listening-animation.active-mic { border-color: var(--blue-primary); box-shadow: 0 0 25px var(--blue-primary), 0 0 50px var(--blue-glow-medium); } /* Blue border when mic is truly active */
         .speaking-animation { width: 120px; height: 120px; background-color: var(--blue-primary); animation: bounce 0.5s infinite; }
         .processing-animation { width: 130px; height: 130px; border: 6px dotted var(--saffron-light); animation: rotate 2s infinite linear; } /* Saffron for processing */
         .sleeping-animation { width: 30px; height: 30px; background-color: var(--blue-dark); opacity: 0.7; animation: fade 2s infinite alternate; }
@@ -547,6 +548,7 @@
                 flex-grow: 1; /* Allow it to grow and push bottom elements down */
             }
             .listening-animation { width: 90px; height: 90px; border-width: 3px; box-shadow: 0 0 15px var(--green-primary); }
+            .listening-animation.active-mic { border-color: var(--blue-primary); box-shadow: 0 0 15px var(--blue-primary); }
             .speaking-animation { width: 80px; height: 80px; background-color: var(--blue-primary); box-shadow: 0 0 15px var(--blue-primary); }
             .processing-animation { width: 85px; height: 85px; border-width: 4px; box-shadow: 0 0 15px var(--saffron-light); }
             .sleeping-animation { width: 25px; height: 25px; background-color: var(--blue-dark); box-shadow: 0 0 8px var(--blue-dark); }
@@ -633,7 +635,7 @@
 
         // --- Configuration ---
         // IMPORTANT: If you want to use models other than gemini-2.0-flash, provide an API key here. Otherwise, leave this as-is.
-        const API_KEY = "AIzaSyBIuMDqeJLSzgQLwwyBJvkTIRJkV3ipaks"; 
+        const API_KEY = ""; 
         const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`;
         
         // --- State Variables ---
@@ -642,7 +644,7 @@
         let isMuted = false;
         let audioContext;
         let chatHistory = []; // chatHistory is still maintained for Gemini API context
-        let isRecognitionActive = false; // New flag to manage recognition state
+        let isRecognitionActive = false; // Flag to manage recognition state
 
         // --- Web Speech API ---
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -680,6 +682,13 @@
             currentState = state;
             stateAnimation.className = ''; // Clear previous animations
             stateAnimation.classList.add(`${state}-animation`);
+
+            // Add/remove active-mic class for visual feedback
+            if (state === 'listening') {
+                stateAnimation.classList.add('active-mic');
+            } else {
+                stateAnimation.classList.remove('active-mic');
+            }
         }
 
         /**
@@ -700,8 +709,15 @@
                     if (onEndCallback) onEndCallback();
                     else listenForWakeWord(); // Default behavior
                 };
+                utterance.onerror = (event) => {
+                    console.error('Speech synthesis error:', event);
+                    updateGUI("Sleeping...", "sleeping");
+                    if (onEndCallback) onEndCallback();
+                    else listenForWakeWord(); // Attempt to restart listening even on error
+                };
                 SpeechSynthesis.speak(utterance);
             } else {
+                // If speech synthesis is not available, muted, or no voice, proceed without speaking
                 updateGUI("Sleeping...", "sleeping");
                 if (onEndCallback) onEndCallback();
                 else listenForWakeWord(); // Still need to continue the loop
@@ -712,17 +728,23 @@
          * Initializes and starts the speech recognition service to listen for the wake word.
          */
         function listenForWakeWord() {
-            // Only start if recognition is not already active and not currently speaking
-            if (recognition && !isRecognitionActive && !SpeechSynthesis.speaking && currentState !== 'listening') {
+            // Only start if recognition is available, not already active, and not currently speaking or processing
+            if (recognition && !isRecognitionActive && !SpeechSynthesis.speaking && currentState !== 'processing') {
                 updateGUI("Sleeping... Say 'JYOTIK' to wake me.", "sleeping");
                 try {
                     recognition.start();
                     isRecognitionActive = true; // Set flag to true when starting
                 } catch (e) {
                     // This can happen if start() is called while it's already running.
-                    // The isRecognitionActive flag should largely prevent this.
-                    console.warn("Recognition already started or error during start:", e);
+                    // The isRecognitionActive flag should largely prevent this, but catch defensively.
+                    console.warn("Recognition start error (might be already running):", e);
+                    // If it errors here, it's likely already running or a transient issue,
+                    // so we don't necessarily want to set isRecognitionActive to false immediately.
+                    // The onstart/onend/onerror handlers will manage it.
                 }
+            } else {
+                // If conditions are not met to start recognition, log it for debugging
+                console.log(`listenForWakeWord skipped. Recognition: ${!!recognition}, Active: ${isRecognitionActive}, Speaking: ${SpeechSynthesis.speaking}, State: ${currentState}`);
             }
         }
 
@@ -784,17 +806,19 @@
                 });
 
                 if (!response.ok) {
-                    throw new Error(`API Error: ${response.statusText}`);
+                    throw new Error(`API Error: ${response.status} ${response.statusText}`);
                 }
 
                 const data = await response.json();
                 
-                if (data.candidates && data.candidates.length > 0) {
+                if (data.candidates && data.candidates.length > 0 && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts.length > 0) {
                     const aiResponseText = data.candidates[0].content.parts[0].text;
                     logToChat(aiResponseText, 'jyotik');
                     chatHistory.push({ role: "model", parts: [{ text: aiResponseText }] });
                     speak(aiResponseText);
                 } else {
+                    // Handle cases where the response structure is unexpected or content is missing
+                    console.error("Invalid response structure from AI:", data);
                     throw new Error("Invalid response structure from AI.");
                 }
 
@@ -823,18 +847,22 @@
             // Setup Speech Recognition
             if (SpeechRecognition) {
                 recognition = new SpeechRecognition();
-                recognition.continuous = false;
+                recognition.continuous = false; // Listen for a single utterance
                 recognition.interimResults = false;
                 recognition.lang = 'en-US';
 
                 recognition.onstart = () => {
                     updateGUI("Listening...", "listening");
                     isRecognitionActive = true; // Confirm active when started
+                    console.log("Speech recognition started.");
                 };
                 
                 recognition.onresult = (event) => {
+                    isRecognitionActive = false; // Recognition ends after result
                     const transcript = event.results[0][0].transcript.trim().toLowerCase();
-                    // Wake word detection
+                    console.log("Recognition result:", transcript);
+
+                    // Wake word detection (only if currently sleeping)
                     if (currentState === 'sleeping' && transcript.includes('jyotik')) {
                         const command = transcript.replace('jyotik', '').trim();
                         if (command) {
@@ -843,27 +871,44 @@
                             speak("Yes? How can I help?");
                         }
                     } else if (currentState !== 'sleeping') {
-                           handleCommand(transcript);
+                        // If not sleeping, process any command directly
+                        handleCommand(transcript);
+                    } else {
+                        // If sleeping and wake word not detected, go back to listening for wake word
+                        listenForWakeWord();
                     }
                 };
 
                 recognition.onerror = (event) => {
                     console.error('Speech recognition error:', event.error);
                     isRecognitionActive = false; // Reset flag on error
-                    if (event.error !== 'no-speech') {
+                    if (event.error === 'not-allowed') {
+                        logToChat("Microphone access denied. Please allow microphone permissions for JYOTIK to work.", 'jyotik');
+                        updateGUI("Microphone Denied", "sleeping");
+                    } else if (event.error === 'no-speech') {
+                        // No speech detected, just restart listening for wake word
+                        console.log("No speech detected, restarting wake word listener.");
+                        updateGUI("Sleeping... Say 'JYOTIK' to wake me.", "sleeping");
+                        listenForWakeWord();
+                    } else {
                        updateGUI(`Error: ${event.error}`, "sleeping");
+                       listenForWakeWord(); // Attempt to restart listening on other errors
                     }
                 };
                 
                 recognition.onend = () => {
-                    isRecognitionActive = false; // Reset flag when recognition ends
+                    // This event fires when recognition stops for any reason (result, error, manual stop)
+                    console.log("Speech recognition ended.");
+                    isRecognitionActive = false; // Ensure flag is reset
+                    // Only restart listening if we are not currently speaking or processing a command
                     if (currentState !== 'speaking' && currentState !== 'processing') {
-                       listenForWakeWord(); // Attempt to restart listening if appropriate
+                       listenForWakeWord();
                     }
                 };
 
             } else {
                 logToChat("Speech Recognition is not supported in this browser.", 'jyotik');
+                statusDisplay.textContent = "Speech Recognition NOT Supported";
             }
 
             // Setup Speech Synthesis
@@ -886,7 +931,11 @@
          */
         function populateVoiceList() {
             const voices = SpeechSynthesis.getVoices();
-            if (voices.length === 0) return;
+            if (voices.length === 0) {
+                console.warn("No voices available for SpeechSynthesis.");
+                voiceSelect.innerHTML = '<option value="">No voices available</option>';
+                return;
+            }
 
             voiceSelect.innerHTML = '';
             let defaultMaleVoice = null;
@@ -897,14 +946,19 @@
                 option.setAttribute('data-name', voice.name);
                 voiceSelect.appendChild(option);
 
+                // Prioritize a male voice if available and not already set
                 if (!defaultMaleVoice && voice.name.toLowerCase().includes('male')) {
                     defaultMaleVoice = voice;
                 }
             });
 
+            // Set the current voice
             currentVoice = defaultMaleVoice || voices.find(v => v.lang.startsWith('en')) || voices[0];
             if (currentVoice) {
                 voiceSelect.value = currentVoice.name;
+                console.log("Selected voice:", currentVoice.name);
+            } else {
+                console.warn("Could not find a suitable English voice.");
             }
         }
 
@@ -912,19 +966,31 @@
          * Updates the simulated health data widgets.
          */
         function updateSimulatedData() {
-            const cpu = Math.floor(Math.random() * 60) + 20;
-            const ram = Math.floor(Math.random() * 60) + 30;
-            const net = Math.floor(Math.random() * 490) + 10;
+            const cpu = Math.floor(Math.random() * 60) + 20; // 20-80%
+            const ram = Math.floor(Math.random() * 60) + 30; // 30-90%
+            const net = Math.floor(Math.random() * 490) + 10; // 10-500 Kb/s
 
             cpuValue.textContent = `${cpu}%`;
             cpuBar.style.width = `${cpu}%`;
+            cpuBar.className = 'health-bar'; // Reset class
+            if (cpu > 70) cpuBar.classList.add('yellow');
+            if (cpu > 85) cpuBar.classList.add('red');
+
             ramValue.textContent = `${ram}%`;
             ramBar.style.width = `${ram}%`;
+            ramBar.className = 'health-bar'; // Reset class
+            if (ram > 75) ramBar.classList.add('yellow');
+            if (ram > 90) ramBar.classList.add('red');
+
             netValue.textContent = `${net}Kb/s`;
-            netBar.style.width = `${(net / 500) * 100}%`;
+            netBar.style.width = `${(net / 500) * 100}%`; // Scale to 500 max
+            netBar.className = 'health-bar'; // Reset class
+            if (net > 400) netBar.classList.add('yellow');
+            if (net > 480) netBar.classList.add('red');
+
 
             let statusText = "Optimal";
-            if (cpu > 80 || ram > 85) { statusText = "High Load"; }
+            if (cpu > 80 || ram > 85 || net > 450) { statusText = "High Load"; }
             systemStatus.textContent = statusText;
 
             dateTimeReadout.textContent = new Date().toLocaleString('en-US', {
@@ -939,14 +1005,18 @@
         voiceSelect.addEventListener('change', () => {
             const selectedVoiceName = voiceSelect.selectedOptions[0].getAttribute('data-name');
             currentVoice = SpeechSynthesis.getVoices().find(voice => voice.name === selectedVoiceName);
+            if (currentVoice) {
+                speak(`Voice set to ${currentVoice.name}.`);
+            }
         });
 
         muteBtn.addEventListener('click', () => {
             isMuted = !isMuted;
             if (isMuted) {
-                SpeechSynthesis.cancel();
+                SpeechSynthesis.cancel(); // Stop any ongoing speech
                 muteBtn.textContent = 'Unmute JYOTIK';
                 muteBtn.classList.add('muted');
+                updateGUI("Muted", "sleeping"); // Update GUI to reflect muted state
             } else {
                 muteBtn.textContent = 'Mute JYOTIK';
                 muteBtn.classList.remove('muted');
