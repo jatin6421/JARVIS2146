@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>J.A.R.V.I.S. 2.0 - Gemini Powered</title>
+    <title>JYOTIK 2.0</title>
     <style>
         /* CSS Variables for Blue, Green & Saffron Theme */
         :root {
@@ -153,7 +153,7 @@
         .corner-accent.bottom-left { bottom: 20px; left: 20px; border-bottom-width: 2px; border-left-width: 2px; }
         .corner-accent.bottom-right { bottom: 20px; right: 20px; border-bottom-width: 2px; border-right-width: 2px; }
 
-        .jarvis-title {
+        .jyotik-title {
             color: var(--text-accent); /* Saffron title */
             font-size: 32px; /* Larger title */
             font-weight: bold;
@@ -170,7 +170,7 @@
             filter: brightness(1.5); /* Even more pop */
             z-index: 10;
         }
-        .jarvis-title::after {
+        .jyotik-title::after {
             content: '';
             display: block;
             width: 180px; /* Wider underline */
@@ -370,8 +370,8 @@
             text-shadow: 0 0 5px var(--saffron-glow-subtle);
         }
 
-        .chat-message.jarvis {
-            color: var(--green-light); /* Green for Jarvis messages */
+        .chat-message.jyotik {
+            color: var(--green-light); /* Green for JYOTIK messages */
             text-align: left;
             text-shadow: 0 0 5px var(--green-glow-subtle);
         }
@@ -450,7 +450,7 @@
                 display: none; /* Simplify border elements on mobile */
             }
 
-            .jarvis-title {
+            .jyotik-title {
                 position: static;
                 transform: none;
                 margin-top: 10px;
@@ -460,7 +460,7 @@
                 text-shadow: 0 0 8px var(--text-accent), 0 0 16px var(--text-accent); /* Adjusted glow */
             }
 
-            .jarvis-title::after {
+            .jyotik-title::after {
                 width: 70px; /* Slightly wider underline */
                 height: 2px;
                 margin-top: 6px;
@@ -571,7 +571,7 @@
 </head>
 <body>
     <div class="initial-overlay" id="initialOverlay">
-        <button id="startButton">Start J.A.R.V.I.S.</button>
+        <button id="startButton">Start JYOTIK</button>
         <p>Click to initialize voice and audio systems.</p>
     </div>
 
@@ -582,7 +582,7 @@
         <div class="corner-accent bottom-left"></div>
         <div class="corner-accent bottom-right"></div>
 
-        <div class="jarvis-title">J.A.R.V.I.S. 2.0</div>
+        <div class="jyotik-title">JYOTIK 2.0</div>
         <div class="status-display" id="statusDisplay">Initializing...</div>
 
         <div class="central-animation-container">
@@ -602,7 +602,7 @@
             <div class="voice-controls">
                 <label for="voiceSelect">Select Voice:</label>
                 <select id="voiceSelect"></select>
-                <button id="muteBtn">Mute J.A.R.V.I.S.</button>
+                <button id="muteBtn">Mute JYOTIK</button>
             </div>
             
             <!-- Chat Log Display -->
@@ -654,7 +654,7 @@
         /**
          * Logs a message to the visual chat log and console.
          * @param {string} message - The message to log.
-         * @param {'user' | 'jarvis'} sender - The sender of the message.
+         * @param {'user' | 'jyotik'} sender - The sender of the message.
          */
         function logToChat(message, sender) {
             console.log(`${sender.toUpperCase()}: ${message}`); // Log to console for debugging
@@ -714,7 +714,7 @@
         function listenForWakeWord() {
             // Only start if recognition is not already active and not currently speaking
             if (recognition && !isRecognitionActive && !SpeechSynthesis.speaking && currentState !== 'listening') {
-                updateGUI("Sleeping... Say 'Jarvis' to wake me.", "sleeping");
+                updateGUI("Sleeping... Say 'JYOTIK' to wake me.", "sleeping");
                 try {
                     recognition.start();
                     isRecognitionActive = true; // Set flag to true when starting
@@ -739,14 +739,14 @@
             // Simple client-side commands
             if (transcript.includes('open youtube')) {
                 const response = "Opening YouTube.";
-                logToChat(response, 'jarvis');
+                logToChat(response, 'jyotik');
                 speak(response, () => window.open("https://www.youtube.com", '_blank'));
                 chatHistory.push({ role: "model", parts: [{ text: response }] });
                 return;
             }
             if (transcript.includes('open google')) {
                 const response = "Opening Google.";
-                logToChat(response, 'jarvis');
+                logToChat(response, 'jyotik');
                 speak(response, () => window.open("https://www.google.com", '_blank'));
                 chatHistory.push({ role: "model", parts: [{ text: response }] });
                 return;
@@ -791,7 +791,7 @@
                 
                 if (data.candidates && data.candidates.length > 0) {
                     const aiResponseText = data.candidates[0].content.parts[0].text;
-                    logToChat(aiResponseText, 'jarvis');
+                    logToChat(aiResponseText, 'jyotik');
                     chatHistory.push({ role: "model", parts: [{ text: aiResponseText }] });
                     speak(aiResponseText);
                 } else {
@@ -801,7 +801,7 @@
             } catch (error) {
                 console.error("Gemini API Error:", error);
                 const errorMessage = "I'm sorry, I'm having trouble connecting to my core intelligence. Please check the console for errors.";
-                logToChat(errorMessage, 'jarvis');
+                logToChat(errorMessage, 'jyotik');
                 speak(errorMessage);
             }
         }
@@ -835,8 +835,8 @@
                 recognition.onresult = (event) => {
                     const transcript = event.results[0][0].transcript.trim().toLowerCase();
                     // Wake word detection
-                    if (currentState === 'sleeping' && transcript.includes('jarvis')) {
-                        const command = transcript.replace('jarvis', '').trim();
+                    if (currentState === 'sleeping' && transcript.includes('jyotik')) {
+                        const command = transcript.replace('jyotik', '').trim();
                         if (command) {
                             handleCommand(command);
                         } else {
@@ -863,7 +863,7 @@
                 };
 
             } else {
-                logToChat("Speech Recognition is not supported in this browser.", 'jarvis');
+                logToChat("Speech Recognition is not supported in this browser.", 'jyotik');
             }
 
             // Setup Speech Synthesis
@@ -876,8 +876,8 @@
             updateSimulatedData();
             setInterval(updateSimulatedData, 1000);
             
-            const greeting = "J.A.R.V.I.S. system is online. How can I assist you?";
-            logToChat(greeting, 'jarvis');
+            const greeting = "JYOTIK system is online. How can I assist you?";
+            logToChat(greeting, 'jyotik');
             speak(greeting);
         }
 
@@ -945,10 +945,10 @@
             isMuted = !isMuted;
             if (isMuted) {
                 SpeechSynthesis.cancel();
-                muteBtn.textContent = 'Unmute J.A.R.V.I.S.';
+                muteBtn.textContent = 'Unmute JYOTIK';
                 muteBtn.classList.add('muted');
             } else {
-                muteBtn.textContent = 'Mute J.A.R.V.I.S.';
+                muteBtn.textContent = 'Mute JYOTIK';
                 muteBtn.classList.remove('muted');
                 speak("Audio enabled.");
             }
